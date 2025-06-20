@@ -1,0 +1,20 @@
+{
+  "name": "signature-terrain",
+  "version": "1.0.0",
+  "description": "Multiplayer voxel-terrain demo",
+  "type": "module",
+  "scripts": {
+    "site": "cross-env LIVE_HOST=0.0.0.0 live-server --host=0.0.0.0 --port=8080 --no-browser",
+    "socket": "node server.js",
+    "start": "concurrently -k -n SITE,SOCKET \"npm:site\" \"npm:socket\""
+  },
+  "dependencies": {
+    "uuid": "^9.0.0",
+    "ws": "^8.15.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "live-server": "^1.2.2"
+  }
+}

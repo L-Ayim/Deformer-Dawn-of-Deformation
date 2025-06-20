@@ -1,0 +1,143 @@
+/* styles/style.css */
+
+/* Reset page margins */
+body {
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Idle-hint panel */
+#info {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 13px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.visible {
+  opacity: 1 !important;
+}
+
+/* Minimap in corner */
+#minimap {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  width: 200px; height: 200px;
+  border: 2px solid #888;
+  background: rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+/* Leaderboard styling */
+#leaderboard {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 8px;
+  font-family: sans-serif;
+  font-size: 14px;
+  border-radius: 4px;
+  z-index: 150;
+}
+#leaderboard-list {
+  margin: 4px 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+/* Joystick zones */
+#joystick-zone,
+#joystick-look-zone {
+  display: none;
+  position: absolute;
+  z-index: 10;
+}
+#joystick-zone {
+  bottom: 20px; left: 20px;
+  width: 150px; height: 150px;
+}
+#joystick-look-zone {
+  top: 20px; right: 20px;
+  width: 120px; height: 120px;
+}
+
+/* Shoot button */
+#shoot-button {
+  display: none;
+  position: absolute;
+  top: 30px; right: 160px;
+  width: 60px; height: 60px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  z-index: 11;
+}
+#shoot-button::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 12px; height: 12px;
+  background: red; border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+#shoot-button:active {
+  transform: scale(1.1);
+  opacity: 0.9;
+}
+
+/* Fullscreen toggle button */
+#fullscreen-btn {
+  display: none;
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-size: 18px;
+  font-family: monospace;
+  padding: 6px 12px;
+  border-radius: 6px;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+/* Jump / Fly Buttons */
+#up-button,
+#down-button {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px; height: 60px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid white;
+  border-radius: 50%;
+  z-index: 12;
+}
+#up-button { bottom: 90px; }
+#down-button { bottom: 20px; }
+#up-button::before,
+#down-button::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 0; height: 0;
+  border-style: solid;
+  transform: translate(-50%, -50%);
+}
+#up-button::before {
+  border-width: 0 10px 12px 10px;
+  border-color: transparent transparent white transparent;
+}
+#down-button::before {
+  border-width: 12px 10px 0 10px;
+  border-color: white transparent transparent transparent;
+}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Signature Terrain – Controls</title>
+
+  <!-- nipple.js for on-screen joystick -->
+  <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+
+  <!-- pull in external CSS -->
+  <link rel="stylesheet" href="styles/style.css" />
+</head>
+<body>
+
+  <div id="info">
+    <strong>Controls:</strong>
+    <span id="controls-desktop">
+      W/A/S/D → Move<br>
+      Mouse → Look<br>
+      Shift → Sprint<br>
+      Space ↔ Fly Mode<br>
+      Ctrl → Descend<br>
+      Esc → Reset
+    </span>
+    <span id="controls-mobile" style="display: none;">
+      Joystick (left) → Move<br>
+      Joystick (right) → Look<br>
+      Red Button → Shoot<br>
+      ↑↓ → Jump / Fly<br>
+      ⛶ → Fullscreen
+    </span>
+  </div>
+
+  <div id="leaderboard">
+    <strong>Leaderboard</strong>
+    <ol id="leaderboard-list"></ol>
+  </div>
+
+  <button id="fullscreen-btn">⛶</button>
+  <canvas id="minimap"></canvas>
+  <div id="joystick-zone"></div>
+  <div id="joystick-look-zone"></div>
+  <div id="shoot-button"></div>
+  <div id="up-button"></div>
+  <div id="down-button"></div>
+
+  <!-- Three.js & Noise libs -->
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js';
+    import SimplexNoise from 'https://cdn.jsdelivr.net/npm/simplex-noise@3.0.0/dist/esm/simplex-noise.js';
+    window.THREE = THREE;
+    window.SimplexNoise = SimplexNoise;
+  </script>
+
+  <!-- Mobile UI behavior (joystick, fullscreen hints, fly/jump) -->
+  <script>
+    const isMobile      = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const infoPanel     = document.getElementById('info');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const upBtn         = document.getElementById('up-button');
+    const downBtn       = document.getElementById('down-button');
+
+    let lastTapUp = 0, lastTapDown = 0, idleTimeout;
+
+    function resetIdleTimer() {
+      infoPanel.classList.remove('visible');
+      fullscreenBtn.classList.remove('visible');
+      clearTimeout(idleTimeout);
+      idleTimeout = setTimeout(() => {
+        infoPanel.classList.add('visible');
+        fullscreenBtn.classList.add('visible');
+      }, 3000);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!isMobile) return;
+
+      document.getElementById('controls-desktop').style.display   = 'none';
+      document.getElementById('controls-mobile').style.display    = 'inline';
+      document.getElementById('joystick-zone').style.display      = 'block';
+      document.getElementById('joystick-look-zone').style.display = 'block';
+      document.getElementById('shoot-button').style.display       = 'block';
+      fullscreenBtn.style.display                                 = 'block';
+      upBtn.style.display                                          = 'block';
+
+      fullscreenBtn.addEventListener('click', () => {
+        const el = document.documentElement;
+        if (!document.fullscreenElement) {
+          el.requestFullscreen?.() || el.webkitRequestFullscreen?.();
+        } else {
+          document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+        }
+      });
+
+      document.addEventListener('touchstart', resetIdleTimer, { passive: true });
+      document.addEventListener('mousemove', resetIdleTimer, { passive: true });
+      resetIdleTimer();
+
+      upBtn.addEventListener('touchstart', () => {
+        const now = performance.now();
+        if (now - lastTapUp < 300) {
+          // enter fly mode
+          downBtn.style.display = 'block';
+        } else {
+          // single-tap jump
+        }
+        lastTapUp = now;
+      });
+      upBtn.addEventListener('touchend', () => { /* end jump/ascend */ });
+
+      downBtn.addEventListener('touchstart', () => {
+        const now = performance.now();
+        if (now - lastTapDown < 300) {
+          // exit fly mode
+          downBtn.style.display = 'none';
+        } else {
+          // single-tap descend
+        }
+        lastTapDown = now;
+      });
+      downBtn.addEventListener('touchend', () => { /* end descend */ });
+    });
+  </script>
+
+  <!-- Main game script -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
