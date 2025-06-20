@@ -1,6 +1,6 @@
 // js/game.js - orchestrates game modules
 import { loadHeightmap, initTerrain, terrain, meshHeightAt, HALF } from './terrain.js';
-import { initCharacter, character, shootProjectile, spawnLoadedBullet, projectiles } from './character.js';
+import { initCharacter, character, shootProjectile, spawnLoadedBullet, projectiles, teleport } from './character.js';
 import { setupNetwork, socket, myId } from './network.js';
 import { setupInput, move } from './input.js';
 
@@ -28,15 +28,15 @@ export function startGame(){
       }
     });
 
-    const state = {
-      yawRef:{value:0}, pitchRef:{value:0},
-      spaceHeldRef:{value:false}, zHeldRef:{value:false}, shiftHeldRef:{value:false},
-      lastSpaceRef:{value:0}, lastZRef:{value:0},
-      flyModeRef:{value:false}, onGroundRef:{value:false}, vertVelRef:{value:0},
-      loadedBulletRef:{value:null}, chargingRef:{value:false},
-      chargeStartRef:{value:0}, currentChargeRef:{value:0},
-      teleport(){}, CHARGE_TIME_MAX:1.5
-    };
+      const state = {
+        yawRef:{value:0}, pitchRef:{value:0},
+        spaceHeldRef:{value:false}, zHeldRef:{value:false}, shiftHeldRef:{value:false},
+        lastSpaceRef:{value:0}, lastZRef:{value:0},
+        flyModeRef:{value:false}, onGroundRef:{value:false}, vertVelRef:{value:0},
+        loadedBulletRef:{value:null}, chargingRef:{value:false},
+        chargeStartRef:{value:0}, currentChargeRef:{value:0},
+        teleport, CHARGE_TIME_MAX:1.5
+      };
     setupInput(renderer, state, isMobile);
 
     function animate(){

@@ -2,6 +2,13 @@
 import { GRID, SPAN, meshHeightAt } from './terrain.js';
 import { socket, myId } from './network.js';
 
+// State values used by character behaviors
+let yaw = 0, pitch = 0;
+let vertVel = 0, onGround = true;
+let charging = false;
+let chargeStart = 0;
+let currentCharge = 0;
+
 export const SPEED_OUT = 100;
 export const SPEED_RETURN = 120;
 export const MAX_OUT_RANGE = 120;
