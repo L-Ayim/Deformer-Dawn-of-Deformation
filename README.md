@@ -19,3 +19,5 @@ Run `./bake_tiles.py --min -1 -1 --max 1 1 --out tiles` to generate OBJ
 files for tiles within the given coordinate range. Start the HTTP server
 with `./tile_server.js` and your client can fetch `chunk_x_z.obj` files on
 demand.
+
+Alternatively, run `start-sig.ps1` to automatically bake the tiles and start all servers.
