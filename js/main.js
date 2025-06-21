@@ -1,7 +1,6 @@
 // js/main.js
 // Import required libraries directly so we don't rely on globals
 import * as THREE from '../vendor/three.module.js';
-import { OBJLoader } from '../vendor/examples/jsm/loaders/OBJLoader.js';
 import SimplexNoise from 'https://cdn.jsdelivr.net/npm/simplex-noise@3.0.0/dist/esm/simplex-noise.js';
 
 window.onload = () => {
@@ -142,7 +141,6 @@ window.onload = () => {
 /* ──────────────────────────── CONSTANTS ───────────────────────────── */
 const host = location.hostname;
 const WS_URL          = `ws://${host}:3000`;
-const TILE_URL        = `http://${host}:8081`;
 const GRID            = 300,  SPAN = 1,  HALF = GRID * SPAN / 2;
 const DEFORM_RADIUS   = 1,    DEFORM_DEPTH = 3;
 const SPEED_OUT       = 100,  SPEED_RETURN  = 120;
@@ -165,7 +163,6 @@ const projectiles = [];                   // my bullets + remote ones
 const projectilesGroup = new THREE.Group();  // kept for legacy; harmless
 const CLOCK       = new THREE.Clock();
 const tmpVec      = new THREE.Vector3();
-const objLoader   = new OBJLoader();
 
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
@@ -344,16 +341,6 @@ function sampleHybridNormal(u,v){
   const hD=getNoise(u,v-e), hU=getNoise(u,v+e);
   return new THREE.Vector3(hL-hR,2*e,hD-hU).normalize();
 }
-function loadTile(cx, cz){
-  return new Promise(res => {
-    objLoader.load(`${TILE_URL}/chunk_${cx}_${cz}.obj`, obj => {
-      const mesh = obj.children[0];
-      mesh.geometry.computeVertexNormals();
-      res(mesh);
-    });
-  });
-}
-
 function initTerrain(){
   return new Promise(res => {
   const textureLoader = new THREE.TextureLoader();
@@ -372,13 +359,20 @@ function initTerrain(){
     metalness: 0.1,
     roughness: 0.9
   });
-
-  loadTile(0,0).then(mesh => {
-    terrain = mesh;
-    terrain.material = mat;
-    scene.add(terrain);
-    res();
-  });
+  const geo = new THREE.PlaneGeometry(GRID*SPAN, GRID*SPAN, GRID, GRID);
+  geo.rotateX(-Math.PI/2);
+  const pos = geo.attributes.position;
+  for (let i=0; i<pos.count; i++){
+    const x = pos.getX(i) + HALF;
+    const z = pos.getZ(i) + HALF;
+    const y = getNoise(x/SPAN, z/SPAN);
+    pos.setY(i, y);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  terrain = new THREE.Mesh(geo, mat);
+  scene.add(terrain);
+  res();
   });
 }
 function deformTerrain(impact,radius,depth){
