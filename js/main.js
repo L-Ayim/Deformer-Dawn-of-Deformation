@@ -176,6 +176,21 @@ let   shieldTimer = 0;
 let   speedTimer  = 0;
 let   doubleShotsLeft = 0;
 
+const powerupText = {
+  health: '+20 Health',
+  double: 'Double Shots',
+  shield: 'Shield',
+  speed: 'Double Speed'
+};
+const powerupColors = {
+  health: '#ffff00',
+  double: '#00ffff',
+  shield: '#00ff00',
+  speed: '#ff00ff'
+};
+let activePowerup = '';
+let powerupTimer = 0;
+
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
@@ -198,6 +213,24 @@ function updateLivesDisplay() {
       el.appendChild(bar);
     }
   }
+}
+
+function showPowerupMessage(type){
+  const el = document.getElementById('powerup-msg');
+  if(!el) return;
+  el.textContent = powerupText[type] || '';
+  el.style.color = powerupColors[type] || '#fff';
+  el.classList.add('show');
+  activePowerup = type;
+  if(type==='health') powerupTimer = 1.5;
+}
+
+function hidePowerupMessage(){
+  const el = document.getElementById('powerup-msg');
+  if(!el) return;
+  el.classList.remove('show');
+  activePowerup = '';
+  powerupTimer = 0;
 }
 let   character, bodyMesh, headMesh, Larm, Rarm, Lleg, Rleg;
 let   boxGeo, octGeo, bulletMat, loadedBullet = null;
@@ -814,6 +847,16 @@ function animate(now){
   const dt=Math.min(CLOCK.getDelta(),MAX_DT);
   if(shieldTimer>0) shieldTimer=Math.max(0,shieldTimer-dt);
   if(speedTimer>0) speedTimer=Math.max(0,speedTimer-dt);
+  if(powerupTimer>0){
+    powerupTimer=Math.max(0,powerupTimer-dt);
+    if(powerupTimer===0) hidePowerupMessage();
+  } else if(activePowerup){
+    if((activePowerup==='double' && doubleShotsLeft<=0) ||
+       (activePowerup==='shield' && shieldTimer<=0) ||
+       (activePowerup==='speed'  && speedTimer<=0)){
+      hidePowerupMessage();
+    }
+  }
 
   /* send raw input */
   if(socket.readyState===1&&myId){
@@ -867,9 +910,10 @@ function animate(now){
         const dz=p.mesh.position.z-pu.z;
         if(Math.hypot(dx,dz)<=TARGET_RADIUS){
           socket.send(JSON.stringify({t:'pickup', powerupId:pu.id}));
+          showPowerupMessage(pu.type);
           const mesh=powerupMeshes.get(pu.id);
-          if(mesh){scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); powerupMeshes.delete(pu.id);} 
-          powerups.splice(i,1); i--; 
+          if(mesh){scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); powerupMeshes.delete(pu.id);}
+          powerups.splice(i,1); i--;
         }
       }
 
