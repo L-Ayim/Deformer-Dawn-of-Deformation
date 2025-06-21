@@ -161,7 +161,6 @@ const tmpVec      = new THREE.Vector3();
 const spikes      = [];                   // active terrain spikes
 const hitEffects  = [];                   // transient hit visuals
 const damageTimers= new Map();            // material → remaining flash time
-const labelContainer = document.getElementById('labels');
 let   prevMyHealth= MAX_HEALTH;
 
 let   myId        = null;
@@ -579,13 +578,9 @@ function makeRemoteAvatar(col){
   hb.scale.set(1,0.1,1);
   hb.position.set(0,3.6,0);
   root.add(hb);
-  const label = document.createElement('div');
-  label.className = 'player-label';
-  label.textContent = MAX_HEALTH;
-  labelContainer.appendChild(label);
   root.userData={ body,head,Larm,Rarm,Lleg,Rleg, mat,
     boxGeo, octGeo:new THREE.OctahedronGeometry(1,0).rotateX(Math.PI/2),
-    healthBar:hb, label };
+    healthBar:hb };
   scene.add(root);
   ensureRemoteHasLoadedBullet(root,col);
   return root;
@@ -661,17 +656,8 @@ function makeRemoteAvatar(col){
   ghosts.forEach((av,id)=>{
     if(!(id in pack)){
       av.visible=false;
-      av.userData.label.style.display = 'none';
     } else {
       av.userData.healthBar.lookAt(camera.position);
-      const pos = av.position.clone();
-      pos.y += 4;
-      pos.project(camera);
-      const sx = (pos.x * 0.5 + 0.5) * innerWidth;
-      const sy = (-pos.y * 0.5 + 0.5) * innerHeight;
-      av.userData.label.style.transform = `translate(-50%,-50%) translate(${sx}px,${sy}px)`;
-      av.userData.label.textContent = Math.round(av.userData.health ?? MAX_HEALTH);
-      av.userData.label.style.display = 'block';
     }
   });
 
@@ -853,11 +839,9 @@ function animate(now){
   /* update terrain spikes */
   for(let i=spikes.length-1;i>=0;i--){
     const s=spikes[i];
-    s.age+=dt;
-    const t=Math.min(1,s.age/s.delay);
-    s.mesh.scale.y=THREE.MathUtils.lerp(0.01,1,t);
-    if(s.age>s.delay+0.5){
-      scene.remove(s.mesh); s.mesh.geometry.dispose(); s.mesh.material.dispose();
+    s.age += dt;
+    if(s.age >= s.delay){
+      deformTerrain(new THREE.Vector3(s.x,0,s.z), s.r, -DEFORM_DEPTH * s.height);
       spikes.splice(i,1);
     }
   }
@@ -1065,14 +1049,7 @@ function updatePathMesh() {
 }
 
 function spawnTerrainSpike(x,z,r,delay,height=1){
-  const h = meshHeightAt(x,z);
-  const geo = new THREE.ConeGeometry(r*0.5,r*2*height,8);
-  const mat = new THREE.MeshStandardMaterial({ color: terrain.material.color });
-  const mesh = new THREE.Mesh(geo,mat);
-  mesh.position.set(x,h,z);
-  mesh.scale.y = 0.01;
-  scene.add(mesh);
-  spikes.push({ mesh, age:0, delay });
+  spikes.push({ x, z, r, delay, age:0, height });
 }
 
 function spawnHitEffect(pos){
