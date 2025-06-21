@@ -23,6 +23,7 @@ with `npm start` and connect.
 
 - Press the shoot button again to recall your boomerang early if it's already flying.
 - Hitting a floor target now restores a small amount of health instead of awarding score.
-- Random terrain strikes now occur less often to reduce CPU load.
+- Random terrain strikes now occur even less often to reduce CPU load.
 - Spikes erupt from the ground before dealing damage so alert players can dodge.
 - Characters briefly flash red when hurt so you can tell a hit landed.
+- Boomerang shots now register hits when striking any limb, not just the torso.
