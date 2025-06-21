@@ -337,6 +337,7 @@ socket.addEventListener('message', e => {
       const av = ghosts.get(msg.id);
       if (av) {
         scene.remove(av);
+        if (av.userData.label) av.userData.label.remove();
         ghosts.delete(msg.id);
       }
       if (msg.id === myId) {
@@ -1151,6 +1152,14 @@ function updateRemoteLabels() {
       label.style.display = 'none';
       return;
     }
+    const pos = av.userData.head.getWorldPosition(new THREE.Vector3());
+    pos.project(camera);
+    if (pos.z < -1 || pos.z > 1 ||
+        pos.x < -1 || pos.x > 1 ||
+        pos.y < -1 || pos.y > 1) {
+      label.style.display = 'none';
+      return;
+    }
     label.style.display = 'block';
     const lives = av.userData.lives ?? START_LIVES;
     label.innerHTML = '';
@@ -1160,8 +1169,6 @@ function updateRemoteLabels() {
       bar.className = 'life-bar';
       label.appendChild(bar);
     }
-    const pos = av.userData.head.getWorldPosition(new THREE.Vector3());
-    pos.project(camera);
     const x = (pos.x * 0.5 + 0.5) * innerWidth;
     const y = (-pos.y * 0.5 + 0.5) * innerHeight - 40;
     label.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
