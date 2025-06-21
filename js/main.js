@@ -150,7 +150,7 @@ const CHARGE_TIME_MAX = 1.5,  MIN_SCALE = 1, MAX_SCALE = 3;
 const MIN_SPEED_OUT   = SPEED_OUT,  MAX_SPEED_OUT = SPEED_OUT * 2;
 const MIN_RANGE_OUT   = MAX_OUT_RANGE, MAX_RANGE_OUT = MAX_OUT_RANGE * 2;
 const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
-const NOISE_SCALE     = 0.004, NOISE_AMP = 15, NOISE_OCTS = 6;
+const NOISE_SCALE     = 0.004, NOISE_AMP = 30, NOISE_OCTS = 6;
 const COLOR_FREQ      = 0.1;               // noise frequency for vertex colors
 const TEXTURE_SIZE    = 256;               // resolution of procedural texture
 const MAX_DT          = 0.05;
@@ -228,9 +228,11 @@ function generateSkyTexture(size){
   tex.repeat.set(3,2);
   return tex;
 }
+const skyTex = new THREE.TextureLoader().load('assets/star_sky.jpg');
+skyTex.wrapS = skyTex.wrapT = THREE.RepeatWrapping;
 const geometry=new THREE.SphereGeometry(350,64,64);
 const material=new THREE.MeshBasicMaterial({
-  map: generateSkyTexture(512),
+  map: skyTex,
   side:THREE.BackSide
 });
 skyMesh=new THREE.Mesh(geometry,material);
@@ -387,8 +389,9 @@ function generateNoiseTexture(size){
 }
 function initTerrain(){
   return new Promise(res => {
-  const diffuseMap = generateNoiseTexture(TEXTURE_SIZE);
-  const overlayMap = generateNoiseTexture(TEXTURE_SIZE);
+  const loader = new THREE.TextureLoader();
+  const diffuseMap = loader.load('assets/ruggeddifused.jpg');
+  const overlayMap = loader.load('assets/ruggeddiffused.png');
   const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
   diffuseMap.anisotropy = maxAnisotropy;
   overlayMap.anisotropy = maxAnisotropy;
