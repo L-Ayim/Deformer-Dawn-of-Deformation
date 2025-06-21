@@ -260,8 +260,6 @@ renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
   if (isMobile) setupMobileControls();
 
-/* GPS path mesh */
-let pathMesh = null;
 /* directional paths to other players */
 const playerPathMeshes = new Map();
 
@@ -319,13 +317,6 @@ socket.addEventListener('message', e => {
     targetMesh     = new THREE.Mesh(geom, mat);
     targetMesh.position.set(activeTarget.x, height + 1.5, activeTarget.z);
     scene.add(targetMesh);
-    if (pathMesh) {
-      scene.remove(pathMesh);
-      pathMesh.geometry.dispose();
-      pathMesh.material.dispose();
-      pathMesh = null;
-    }
-    updatePathMesh();
     break;
     }
 
@@ -816,12 +807,6 @@ function animate(now){
         }));
         // clear locally so we only send once
         activeTarget = null;
-        if (pathMesh) {
-          scene.remove(pathMesh);
-          pathMesh.geometry.dispose();
-          pathMesh.material.dispose();
-          pathMesh = null;
-        }
       }
     }
 
@@ -981,10 +966,6 @@ function animate(now){
 
   updatePlayerPathMeshes();
 
-  /* GPS path */
-  if (activeTarget && !pathMesh) {
-    updatePathMesh();
-  }
 
 }
 window.addEventListener('resize',()=>{
@@ -1045,29 +1026,6 @@ function createPathStrip(from, to, startWidth = 1, endWidth = 0.5,
   return g;
 }
 
-function updatePathMesh() {
-  if (!activeTarget || !terrain || !character || !bodyMesh) return;
-  const start = bodyMesh.getWorldPosition(new THREE.Vector3());
-  const endY = meshHeightAt(activeTarget.x, activeTarget.z) + 1.5;
-  const end = new THREE.Vector3(activeTarget.x, endY, activeTarget.z);
-  const geo = createPathStrip(start, end, 1.5, 0.4, 80,
-                              myColor, new THREE.Color(0xffff00));
-  if (pathMesh) {
-    scene.remove(pathMesh);
-    pathMesh.geometry.dispose();
-    pathMesh.material.dispose();
-  }
-  pathMesh = new THREE.Mesh(
-    geo,
-    new THREE.MeshBasicMaterial({
-      vertexColors: true,
-      side: THREE.DoubleSide
-    })
-  );
-  scene.add(pathMesh);
-
-  // path thickness tapers toward the destination – no arrows needed
-}
 
 function updatePlayerPathMeshes() {
   if (!terrain || !character || !bodyMesh) return;
