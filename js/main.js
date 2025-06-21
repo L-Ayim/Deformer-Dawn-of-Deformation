@@ -188,7 +188,8 @@ let targetMesh     = null;   // Three.js mesh for the pillar/flag
 
 /* ──────────────────── DOM + RENDER TARGET SET-UP ─────────────────── */
 const scene     = new THREE.Scene();
-scene.background = new THREE.Color(0xd3d3d3);
+// Use a lighter gray to give the world a softer backdrop
+scene.background = new THREE.Color(0xcccccc);
 // --- SKY SPHERE SETUP ---
 let skyMesh;
 function generateSkyTexture(size){
@@ -232,7 +233,7 @@ skyMesh = new THREE.Mesh(
   new THREE.SphereGeometry(350, 64, 64),
   // Use a standard material so we can control metalness and roughness
   new THREE.MeshStandardMaterial({
-    color: 0xd3d3d3,    // light gray
+    color: 0xcccccc,    // light gray
     metalness: 1,
     roughness: 1,
     side: THREE.BackSide
