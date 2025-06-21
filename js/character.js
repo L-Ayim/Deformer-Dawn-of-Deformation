@@ -2,6 +2,9 @@
 import { GRID, SPAN, meshHeightAt } from './terrain.js';
 import { socket, myId } from './network.js';
 
+// Reference to the main THREE.Scene, assigned in initCharacter
+let scene;
+
 // State values used by character behaviors
 let yaw = 0, pitch = 0;
 let vertVel = 0, onGround = true;
@@ -33,7 +36,10 @@ export let boxGeo, octGeo, bulletMat, loadedBullet = null;
 
 const bulletGeo = new THREE.SphereGeometry(0.2,8,8);
 
-export function initCharacter(myColor, scene, renderer, isMobile){
+export function initCharacter(myColor, sceneArg, renderer, isMobile){
+  // store reference for use by helper functions like makeRemoteAvatar
+  scene = sceneArg;
+
   character = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({
     color:myColor.clone(), emissive:myColor.clone().multiplyScalar(0.25)
