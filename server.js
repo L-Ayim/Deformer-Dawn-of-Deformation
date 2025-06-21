@@ -41,7 +41,6 @@ const POWERUP_COUNTS = {
 const SHIELD_DURATION = 10; // seconds
 const SPEED_DURATION  = 10; // seconds
 const DOUBLE_SHOTS    = 10; // number of double shots
-const START_LIVES     = 5;  // lives per player
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
@@ -89,7 +88,9 @@ function packSnapshot() {
           shield: p.shield || 0,
           speed: p.speed || 0,
           double: p.doubleShots || 0,
-          lives: p.lives
+          kills: p.kills || 0,
+          deaths: p.deaths || 0,
+          team: p.team
         }
       ])
     ),
@@ -137,16 +138,9 @@ function applySpikeDamage(spikes){
           if(p.shield>0) break;
           p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
           if(p.health<=0){
-            p.lives -= 1;
-            if(p.lives>0){
-              wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
-              p.health=MAX_HEALTH;
-            } else {
-              wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerOut',id})));
-              usedColors.delete(p.color);
-              players.delete(id);
-              break;
-            }
+            p.deaths += 1;
+            wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
+            p.health=MAX_HEALTH;
           }
           break;
         }
@@ -197,6 +191,7 @@ wss.on('connection', ws => {
 
   // Initialize player state
   players.set(id, {
+    socket: ws,
     input:{},
     state:{},
     color,
@@ -204,7 +199,9 @@ wss.on('connection', ws => {
     shield: 0,
     speed: 0,
     doubleShots: 0,
-    lives: START_LIVES
+    kills: 0,
+    deaths: 0,
+    team: null
   });
 
   // Send welcome packet with assigned ID, color, and noise seed
@@ -285,8 +282,10 @@ wss.on('connection', ws => {
       case 'hitPlayer': {
         if (!players.has(id)) break;
         const target = players.get(msg.target);
-        if (target) {
+        const attacker = players.get(id);
+        if (target && attacker) {
           if (target.shield > 0) break;
+          if (attacker.team && target.team && attacker.team === target.team) break;
           const idx = projectiles.findIndex(p => p.id===msg.shotId);
           let mult = 1;
           if (idx !== -1) {
@@ -297,17 +296,36 @@ wss.on('connection', ws => {
           const dmg = PROJECTILE_DAMAGE * mult;
           target.health = Math.max(0, target.health - dmg);
           if (target.health <= 0) {
-            target.lives -= 1;
-            if (target.lives > 0) {
-              wss.clients.forEach(c => c.readyState===1 &&
-                c.send(JSON.stringify({ t:'playerDied', id: msg.target })));
-              target.health = MAX_HEALTH;
-            } else {
-              wss.clients.forEach(c => c.readyState===1 &&
-                c.send(JSON.stringify({ t:'playerOut', id: msg.target })));
-              usedColors.delete(target.color);
-              players.delete(msg.target);
-            }
+            attacker.kills += 1;
+            target.deaths += 1;
+            wss.clients.forEach(c => c.readyState===1 &&
+              c.send(JSON.stringify({ t:'playerDied', id: msg.target })));
+            target.health = MAX_HEALTH;
+          }
+        }
+        break;
+      }
+
+      case 'teamRequest': {
+        const target = players.get(msg.target);
+        if (target) {
+          target.socket.send(JSON.stringify({ t:'teamRequest', from:id, color: players.get(id).color }));
+        }
+        break;
+      }
+
+      case 'teamResponse': {
+        const requester = players.get(msg.requester);
+        const responder = players.get(id);
+        if (requester && responder) {
+          if (msg.accept) {
+            const teamId = requester.team || responder.team || requester.color;
+            requester.team = teamId;
+            responder.team = teamId;
+            requester.socket.send(JSON.stringify({ t:'teamJoin', with: responder.color }));
+            responder.socket.send(JSON.stringify({ t:'teamJoin', with: requester.color }));
+          } else {
+            requester.socket.send(JSON.stringify({ t:'teamDeclined', from: responder.color }));
           }
         }
         break;

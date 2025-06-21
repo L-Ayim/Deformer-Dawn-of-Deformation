@@ -153,7 +153,6 @@ const HIT_PULL_RADIUS = 4.0;               // range for projectile attraction
 const SHIELD_DURATION = 10;
 const SPEED_DURATION  = 10;
 const DOUBLE_SHOTS    = 10;
-const START_LIVES     = 5;
 const LABEL_VIS_DISTANCE = 40;          // max distance to show remote labels
 const mapSeed         = '🌎';                 // constant → identical terrain
 const noiseSky        = new SimplexNoise(mapSeed + 'sky');
@@ -194,8 +193,10 @@ let powerupTimer = 0;
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
-let   myLives     = START_LIVES;
 let   spectator   = false;
+let   myTeam      = null;
+const teams       = new Map();
+const scoreboardEl= document.getElementById('scoreboard');
 
 function updateHealthBar() {
   const fill = document.getElementById('health-fill');
@@ -204,18 +205,7 @@ function updateHealthBar() {
   if (text) text.textContent = Math.round(myHealth);
 }
 
-function updateLivesDisplay() {
-  const el = document.getElementById('life-count');
-  if (el) {
-    el.innerHTML = '';
-    el.style.color = myColor.getStyle();
-    for (let i = 0; i < myLives; i++) {
-      const bar = document.createElement('span');
-      bar.className = 'life-bar';
-      el.appendChild(bar);
-    }
-  }
-}
+function updateLivesDisplay() {}
 
 function showPowerupMessage(type){
   const el = document.getElementById('powerup-msg');
@@ -332,8 +322,6 @@ socket.addEventListener('message', e => {
     case 'welcome':
       myId    = msg.id;
       myColor = new THREE.Color().setStyle(msg.color);
-      myLives = START_LIVES;
-      updateLivesDisplay();
 
       // Update avatar colors if we've already built the character
       if (bodyMesh) {
@@ -385,11 +373,18 @@ socket.addEventListener('message', e => {
         if (av.userData.label) av.userData.label.remove();
         ghosts.delete(msg.id);
       }
-      if (msg.id === myId) {
-        alert('Game over! You are now spectating.');
-        spectator = true;
-        if (character) scene.remove(character);
-      }
+    } break;
+
+    case 'teamRequest': {
+      const accept = confirm(`${msg.color} wants to team up. Accept?`);
+      socket.send(JSON.stringify({t:'teamResponse', requester: msg.from, accept}));
+    } break;
+    case 'teamJoin': {
+      // no action needed, snapshot will update team
+      alert(`Teamed up with ${msg.with}`);
+    } break;
+    case 'teamDeclined': {
+      alert(`${msg.from} declined your team request`);
     } break;
   }
 });
@@ -399,7 +394,6 @@ noise = new SimplexNoise(mapSeed);
 initTerrain().then(() => {
   initCharacter();
   updateHealthBar();
-  updateLivesDisplay();
   requestAnimationFrame(animate);
 });
 
@@ -642,7 +636,7 @@ function makeRemoteAvatar(col){
   root.add(hb);
   root.userData={ body,head,Larm,Rarm,Lleg,Rleg, mat,
     boxGeo, octGeo:new THREE.OctahedronGeometry(1,0).rotateX(Math.PI/2),
-    healthBar:hb };
+    healthBar:hb, colorName: col };
   scene.add(root);
   ensureRemoteHasLoadedBullet(root,col);
   return root;
@@ -676,10 +670,6 @@ function makeRemoteAvatar(col){
     powerups = pus;
   }
   if (pack[myId] && typeof pack[myId].health === 'number') {
-    if (typeof pack[myId].lives === 'number') {
-      myLives = pack[myId].lives;
-      updateLivesDisplay();
-    }
     const newH = pack[myId].health;
     if(newH < prevMyHealth && bodyMesh){
       flashMaterial(bodyMesh.material);
@@ -696,11 +686,14 @@ function makeRemoteAvatar(col){
     shieldTimer = pack[myId].shield || 0;
     speedTimer  = pack[myId].speed  || 0;
     doubleShotsLeft = pack[myId].double || 0;
+    myTeam = pack[myId].team || null;
+    teams.set(myId, myTeam);
   }
 
   /* ---------- players ---------- */
   for(const [id,st] of Object.entries(pack)){
     if(id===myId) continue;
+    teams.set(id, st.team || null);
     const av=ghosts.get(id) ?? makeRemoteAvatar(st.color);
     ghosts.set(id,av);
     av.position.set(st.x,st.y,st.z);
@@ -790,6 +783,7 @@ function makeRemoteAvatar(col){
   });
   updatePlayerPathMeshes();
   updateRemoteLabels();
+  updateScoreboard(pack);
 }
 
 /* ────────────────────────── INPUT HANDLERS ───────────────────────── */
@@ -837,6 +831,19 @@ document.addEventListener('keyup',e=>{
       break;
     case'Space':spaceHeld=false;break;
     case'KeyZ':case'KeyZ':zHeld =false;break;
+  }
+});
+
+renderer.domElement.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if(!character) return;
+  let closestId=null; let best=Infinity;
+  ghosts.forEach((av,id)=>{
+    const d=av.position.distanceTo(character.position);
+    if(d<3&&d<best){best=d; closestId=id;}
+  });
+  if(closestId){
+    socket.send(JSON.stringify({t:'teamRequest', target:closestId}));
   }
 });
 
@@ -894,6 +901,7 @@ function animate(now){
     if(p.owner===myId){
       ghosts.forEach((av,id)=>{
         if(hitPlayer) return;
+        if(teams.get(id)&&teams.get(id)===myTeam) return;
         if(avatarHitTest(av, prevPos, p.mesh.position)){
           socket.send(JSON.stringify({t:'hitPlayer', target:id, shotId:p.id}));
           flashMaterial(av.userData.mat);
@@ -1137,7 +1145,7 @@ function createPathStrip(from, to, startWidth = 1, endWidth = 0.5,
 
 function updatePlayerPathMeshes() {
   if (!terrain || !character || !bodyMesh) return;
-  if (spectator || myLives <= 0) {
+  if (spectator) {
     playerPathMeshes.forEach(mesh => {
       scene.remove(mesh);
       mesh.geometry.dispose();
@@ -1158,16 +1166,7 @@ function updatePlayerPathMeshes() {
       return;
     }
 
-    if (av.userData.lives !== undefined && av.userData.lives <= 0) {
-      const old = playerPathMeshes.get(id);
-      if (old) {
-        scene.remove(old);
-        old.geometry.dispose();
-        old.material.dispose();
-        playerPathMeshes.delete(id);
-      }
-      return;
-    }
+
 
     const start = bodyMesh.getWorldPosition(new THREE.Vector3());
     const end = av.userData.body.getWorldPosition(new THREE.Vector3());
@@ -1230,18 +1229,25 @@ function updateRemoteLabels() {
       return;
     }
     label.style.display = 'block';
-    const lives = av.userData.lives ?? START_LIVES;
-    label.innerHTML = '';
+    label.textContent = av.userData.colorName || '';
     label.style.color = av.userData.mat.color.getStyle();
-    for (let i = 0; i < lives; i++) {
-      const bar = document.createElement('span');
-      bar.className = 'life-bar';
-      label.appendChild(bar);
-    }
     const x = (pos.x * 0.5 + 0.5) * innerWidth;
     const y = (-pos.y * 0.5 + 0.5) * innerHeight - 40;
     label.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
   });
+}
+
+function updateScoreboard(snapshotPlayers){
+  if(!scoreboardEl) return;
+  const entries = Object.values(snapshotPlayers).map(p=>({
+    color:p.color,
+    kills:p.kills||0,
+    deaths:p.deaths||0,
+    team:p.team||null
+  })).sort((a,b)=>b.kills-a.kills);
+  scoreboardEl.innerHTML = entries.map(e =>
+    `<div style="color:${e.color}">${e.color}: ${e.kills}/${e.deaths}</div>`
+  ).join('');
 }
 
 function spawnTerrainSpike(x,z,r,delay,height=1){
