@@ -53,6 +53,9 @@ const projectiles = [];
 let nextShotId = 0;
 // Power-ups present in the world
 let powerups = [];
+// Pending team requests: id -> Map(targetId -> timestamp)
+const pendingTeam = new Map();
+const TEAM_REQ_WINDOW_MS = 2000;
 
 /* ──────────── NAMED COLOR PALETTE ────────────────────── */
 // A set of high-contrast color names
@@ -308,24 +311,27 @@ wss.on('connection', ws => {
 
       case 'teamRequest': {
         const target = players.get(msg.target);
-        if (target) {
-          target.socket.send(JSON.stringify({ t:'teamRequest', from:id, color: players.get(id).color }));
-        }
-        break;
-      }
+        const requester = players.get(id);
+        if (target && requester) {
+          const dx = (requester.state.x||0) - (target.state.x||0);
+          const dz = (requester.state.z||0) - (target.state.z||0);
+          if (Math.hypot(dx, dz) <= 3) {
+            const now = Date.now();
+            let map = pendingTeam.get(id);
+            if (!map) { map = new Map(); pendingTeam.set(id, map); }
+            map.set(msg.target, now);
 
-      case 'teamResponse': {
-        const requester = players.get(msg.requester);
-        const responder = players.get(id);
-        if (requester && responder) {
-          if (msg.accept) {
-            const teamId = requester.team || responder.team || requester.color;
-            requester.team = teamId;
-            responder.team = teamId;
-            requester.socket.send(JSON.stringify({ t:'teamJoin', with: responder.color }));
-            responder.socket.send(JSON.stringify({ t:'teamJoin', with: requester.color }));
-          } else {
-            requester.socket.send(JSON.stringify({ t:'teamDeclined', from: responder.color }));
+            const tMap = pendingTeam.get(msg.target);
+            const tTime = tMap && tMap.get(id);
+            if (tTime && now - tTime <= TEAM_REQ_WINDOW_MS) {
+              const teamId = requester.team || target.team || requester.color;
+              requester.team = teamId;
+              target.team = teamId;
+              requester.socket.send(JSON.stringify({ t:'teamJoin', with: target.color }));
+              target.socket.send(JSON.stringify({ t:'teamJoin', with: requester.color }));
+              map.delete(msg.target);
+              if (tMap) tMap.delete(id);
+            }
           }
         }
         break;
