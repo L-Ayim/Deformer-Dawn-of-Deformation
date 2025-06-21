@@ -49,8 +49,10 @@
   <!-- Three.js & Noise libs -->
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js';
+    import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/OBJLoader.js';
     import SimplexNoise from 'https://cdn.jsdelivr.net/npm/simplex-noise@3.0.0/dist/esm/simplex-noise.js';
     window.THREE = THREE;
+    window.OBJLoader = OBJLoader;
     window.SimplexNoise = SimplexNoise;
   </script>
 
