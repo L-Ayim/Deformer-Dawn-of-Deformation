@@ -324,9 +324,10 @@ case 'scoreUpdate': {
 
 /* ─────────────────────────── TERRAIN LOAD ────────────────────────── */
 noise = new SimplexNoise(mapSeed);
-initTerrain();
-initCharacter();
-requestAnimationFrame(animate);
+initTerrain().then(() => {
+  initCharacter();
+  requestAnimationFrame(animate);
+});
 
 /* ───────────────────────────── TERRAIN ───────────────────────────── */
 function getNoise(u,v){
@@ -354,6 +355,7 @@ function loadTile(cx, cz){
 }
 
 function initTerrain(){
+  return new Promise(res => {
   const textureLoader = new THREE.TextureLoader();
   const diffuseMap = textureLoader.load('assets/ruggeddiffused.png');
   const overlayMap = textureLoader.load('assets/ruggedpeaks.jpg');
@@ -375,6 +377,8 @@ function initTerrain(){
     terrain = mesh;
     terrain.material = mat;
     scene.add(terrain);
+    res();
+  });
   });
 }
 function deformTerrain(impact,radius,depth){
@@ -391,6 +395,7 @@ function deformTerrain(impact,radius,depth){
   terrain.geometry.computeVertexNormals();
 }
 function meshHeightAt(x,z){
+  if (!terrain) return 0;
   const size=GRID*SPAN;
   const gx=Math.round((x+size/2)/SPAN);
   const gz=Math.round((z+size/2)/SPAN);

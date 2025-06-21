@@ -7,6 +7,9 @@ const PORT = 8081;
 const ROOT = process.argv[2] || 'tiles';
 
 const server = http.createServer((req, res) => {
+  // Allow cross-origin requests so the main page can fetch tiles
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
   const urlPath = req.url.replace(/^\/+/, '');
   const filePath = path.join(ROOT, urlPath);
   fs.readFile(filePath, (err, data) => {
