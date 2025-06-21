@@ -109,12 +109,22 @@ canvas {
 }
 #life-count {
   position: absolute;
-  top: -18px;
+  top: -22px;
   left: 0;
   width: 100%;
-  text-align: center;
-  font-family: monospace;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
   pointer-events: none;
+}
+
+.life-bar {
+  display: inline-block;
+  width: 12px;
+  height: 6px;
+  background: currentColor;
+  border: 1px solid rgba(0,0,0,0.4);
+  border-radius: 2px;
 }
 #health-fill {
   height: 100%;
@@ -134,10 +144,10 @@ canvas {
 .player-label {
   position: absolute;
   color: white;
-  font-family: monospace;
-  font-size: 14px;
-  white-space: nowrap;
+  display: flex;
+  gap: 2px;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  font-size: 0;
 }
 
