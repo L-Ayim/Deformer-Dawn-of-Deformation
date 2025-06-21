@@ -112,7 +112,7 @@ export function setupInput(renderer, state, isMobile){
         if(now-lastSpaceRef.value<300) state.flyModeRef.value=!state.flyModeRef.value;
         else if(state.onGroundRef.value&&!state.flyModeRef.value){ state.vertVelRef.value=12; state.onGroundRef.value=false; }
         lastSpaceRef.value=now; break;
-      case'KeyZ':case'KeyZ':
+      case'KeyZ':
         zHeldRef.value =true;
         if(state.flyModeRef.value&&now-lastZRef.value<300) state.flyModeRef.value=false;
         lastZRef.value=now; break;
@@ -125,7 +125,7 @@ export function setupInput(renderer, state, isMobile){
       case'KeyA':move.l=0;break; case'KeyD':move.r=0;break;
       case'ShiftLeft':case'ShiftRight':shiftHeldRef.value=false;break;
       case'Space':spaceHeldRef.value=false;break;
-      case'KeyZ':case'KeyZ':zHeldRef.value =false;break;
+      case'KeyZ':zHeldRef.value =false;break;
     }
   });
 }

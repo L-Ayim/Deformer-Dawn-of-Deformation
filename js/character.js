@@ -12,6 +12,11 @@ let charging = false;
 let chargeStart = 0;
 let currentCharge = 0;
 
+export function setAim(newYaw, newPitch){
+  yaw = newYaw;
+  pitch = newPitch;
+}
+
 export const SPEED_OUT = 100;
 export const SPEED_RETURN = 120;
 export const MAX_OUT_RANGE = 120;
