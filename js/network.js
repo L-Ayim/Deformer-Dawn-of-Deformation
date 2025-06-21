@@ -11,6 +11,8 @@ export const remoteShots = new Map();
 export let myId = null;
 export let myColor = new THREE.Color(0x222222);
 export const scores = new Map();
+export const names  = new Map();
+export let myName = '';
 export let activeTarget = null;
 
 export function sendInput(input){
@@ -25,6 +27,22 @@ export function sendState(state){
   }
 }
 
+export function setMyName(name){
+  myName = name;
+  if(myId && socket.readyState===1){
+    socket.send(JSON.stringify({ t:'setName', name }));
+  }
+}
+
+export function showHudMessage(text){
+  const hud = document.getElementById('hud');
+  if(!hud) return;
+  hud.textContent = text;
+  hud.style.opacity = '1';
+  clearTimeout(showHudMessage._to);
+  showHudMessage._to = setTimeout(()=>{ hud.style.opacity='0'; },2000);
+}
+
 export function updateScoreboard() {
   const ol = document.getElementById('leaderboard-list');
   ol.innerHTML = '';
@@ -32,7 +50,8 @@ export function updateScoreboard() {
     .sort((a,b) => b[1] - a[1])
     .forEach(([id, pts]) => {
       const li = document.createElement('li');
-      li.textContent = (id === myId ? 'You' : id) + ': ' + pts;
+      const name = id === myId ? (myName || 'You') : (names.get(id) || id);
+      li.textContent = name + ': ' + pts;
       ol.appendChild(li);
     });
 }
@@ -40,6 +59,7 @@ export function updateScoreboard() {
 export function applySnapshot({ players:pack, projectiles:shots }, scene, bulletGeo){
   Object.keys(pack).forEach(id => {
     if (!scores.has(id)) scores.set(id, 0);
+    if (pack[id].name) names.set(id, pack[id].name);
   });
   updateScoreboard();
 
@@ -118,12 +138,23 @@ export function setupNetwork(scene, bulletGeo, targetHandlers){
       case 'scoreUpdate': {
         Object.entries(msg.scores).forEach(([id, pts]) => { scores.set(id, pts); });
         updateScoreboard();
+        if(msg.scorer){
+          const name = msg.scorer === myId ? (myName||'You') : (names.get(msg.scorer) || msg.scorer);
+          const pts  = scores.get(msg.scorer) || 0;
+          showHudMessage(`${name} has ${pts} point${pts===1?'':'s'}`);
+        }
         break;
       }
       case 'welcome':
         myId    = msg.id;
         myColor = new THREE.Color().setStyle(msg.color);
         scores.set(myId, 0);
+        names.set(myId, myName);
+        if(socket.readyState===1) socket.send(JSON.stringify({ t:'setName', name: myName }));
+        updateScoreboard();
+        break;
+      case 'nameUpdate':
+        names.set(msg.id, msg.name);
         updateScoreboard();
         break;
       case 'snapshot':
