@@ -153,6 +153,7 @@ const HIT_PULL_RADIUS = 4.0;               // range for projectile attraction
 const SHIELD_DURATION = 10;
 const SPEED_DURATION  = 10;
 const DOUBLE_SHOTS    = 10;
+const START_LIVES     = 5;
 const mapSeed         = '🌎';                 // constant → identical terrain
 const noiseSky        = new SimplexNoise(mapSeed + 'sky');
 
@@ -176,6 +177,7 @@ let   doubleShotsLeft = 0;
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
+let   myLives     = START_LIVES;
 
 function updateHealthBar() {
   const fill = document.getElementById('health-fill');
@@ -269,18 +271,7 @@ document.body.appendChild(renderer.domElement);
 /* directional paths to other players */
 const playerPathMeshes = new Map();
 
-/* simple “idle controls” overlay fade */
-const infoEl     = document.getElementById('info');
-let   showTimer  = null;
-['mousemove','mousedown','keydown','touchstart'].forEach(evt =>
-  document.addEventListener(evt, () => {
-    infoEl.style.opacity = '0';
-    clearTimeout(showTimer);
-    showTimer = setTimeout(() => {
-      infoEl.style.opacity = '1';
-    }, 10000);
-  }, { passive:true })
-);
+
 
 /* ──────────────────────────── SOCKET I/O ─────────────────────────── */
 socket.addEventListener('message', e => {
@@ -323,6 +314,17 @@ socket.addEventListener('message', e => {
     case 'playerDied': {
       if (msg.id === myId) {
         teleport();
+      }
+    } break;
+
+    case 'playerOut': {
+      const av = ghosts.get(msg.id);
+      if (av) {
+        scene.remove(av);
+        ghosts.delete(msg.id);
+      }
+      if (msg.id === myId) {
+        alert('Game over!');
       }
     } break;
   }
@@ -607,6 +609,9 @@ function makeRemoteAvatar(col){
     powerups = pus;
   }
   if (pack[myId] && typeof pack[myId].health === 'number') {
+    if (typeof pack[myId].lives === 'number') {
+      myLives = pack[myId].lives;
+    }
     const newH = pack[myId].health;
     if(newH < prevMyHealth && bodyMesh){
       flashMaterial(bodyMesh.material);
@@ -633,6 +638,7 @@ function makeRemoteAvatar(col){
     av.position.set(st.x,st.y,st.z);
     av.rotation.y = st.yaw;
     av.userData.mat.color.set(st.color);
+    if (typeof st.lives === 'number') av.userData.lives = st.lives;
 
     if (typeof st.health === 'number') {
       if(av.userData.lastHealth!==undefined && st.health < av.userData.lastHealth){

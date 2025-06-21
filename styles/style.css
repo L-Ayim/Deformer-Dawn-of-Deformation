@@ -18,24 +18,7 @@ canvas {
   touch-action: none;
 }
 
-/* Idle-hint panel */
-#info {
-  position: absolute;
-  top: 10px; left: 10px;
-  background: rgba(0,0,0,0.6);
-  color: #fff;
-  padding: 8px;
-  font-family: monospace;
-  font-size: 13px;
-  border-radius: 4px;
-  pointer-events: none;
-  z-index: 100;
-  opacity: 0;
-  transition: opacity 0.8s ease;
-}
-.visible {
-  opacity: 1 !important;
-}
+
 
 
 
