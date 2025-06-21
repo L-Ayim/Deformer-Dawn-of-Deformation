@@ -77,7 +77,7 @@ window.onload = () => {
     const shootBtn = document.getElementById('shoot-button');
     shootBtn.addEventListener('touchstart', e => {
       e.preventDefault();
-      if (!loadedBullet) return;
+      if (!loadedBullet) { recallProjectile(); return; }
       charging = true;
       chargeStart = performance.now();
     });
@@ -493,7 +493,8 @@ function initCharacter(){
   /* mouse input for charge shot */
 if (!isMobile) {
   renderer.domElement.addEventListener('mousedown', e => {
-    if (e.button !== 0 || !loadedBullet) return;
+    if (e.button !== 0) return;
+    if (!loadedBullet) { recallProjectile(); return; }
     charging = true;
     chargeStart = performance.now();
   });
@@ -545,6 +546,18 @@ function shootProjectile(){
     }));
   }
   loadedBullet=null;
+}
+
+function recallProjectile(){
+  if(loadedBullet){
+    charging = false;
+    currentCharge = 0;
+    shootProjectile();
+    return;
+  }
+  for(const p of projectiles){
+    if(p.id===undefined) p.returning = true;
+  }
 }
 function teleport(){
   const x=(Math.random()-0.5)*GRID*SPAN, z=(Math.random()-0.5)*GRID*SPAN;
