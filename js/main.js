@@ -230,8 +230,11 @@ function generateSkyTexture(size){
 // Simple light gray sky sphere with PBR material
 skyMesh = new THREE.Mesh(
   new THREE.SphereGeometry(350, 64, 64),
-  new THREE.MeshBasicMaterial({
-    color: 0x87cefa, // consistent sky color
+  // Use a standard material so we can control metalness and roughness
+  new THREE.MeshStandardMaterial({
+    color: 0xd3d3d3,    // light gray
+    metalness: 1,
+    roughness: 1,
     side: THREE.BackSide
   })
 );
