@@ -18,11 +18,11 @@ const TERRAIN_HALF  = 100;
 const TARGET_RADIUS = 5;
 const MAX_HEALTH    = 100;
 const PROJECTILE_DAMAGE = 25;
-const TERRAIN_ATTACK_INTERVAL = 5000;
+const TERRAIN_ATTACK_INTERVAL = 3000;
 const TERRAIN_ATTACK_RADIUS   = 3;
 const TERRAIN_SPIKE_DELAY     = 1000; // ms delay before damage applies
 const TERRAIN_DAMAGE = 25;
-const NUM_SPIKES_PER_ATTACK   = 5;
+const NUM_SPIKES_PER_ATTACK   = 15;
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
@@ -193,9 +193,15 @@ wss.on('connection', ws => {
       case 'hitPlayer': {
         const target = players.get(msg.target);
         if (target) {
-          target.health = Math.max(0, target.health - PROJECTILE_DAMAGE);
           const idx = projectiles.findIndex(p => p.id===msg.shotId);
-          if (idx !== -1) projectiles.splice(idx,1);
+          let mult = 1;
+          if (idx !== -1) {
+            const proj = projectiles[idx];
+            mult = 1 + 2 * (proj.c ?? 0);
+            projectiles.splice(idx,1);
+          }
+          const dmg = PROJECTILE_DAMAGE * mult;
+          target.health = Math.max(0, target.health - dmg);
           if (target.health <= 0) {
             wss.clients.forEach(c => c.readyState===1 &&
               c.send(JSON.stringify({ t:'playerDied', id: msg.target })));
