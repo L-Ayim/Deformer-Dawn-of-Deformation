@@ -224,11 +224,8 @@ renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
   if (isMobile) setupMobileControls();
 
-/* minimap canvas */
-const miniCanvas = document.getElementById('minimap');
-const miniCtx    = miniCanvas.getContext('2d');
-const MM_SIZE = 200;
-miniCanvas.width = MM_SIZE; miniCanvas.height = MM_SIZE;
+/* HUD arrow */
+const arrowEl = document.getElementById('target-arrow');
 
 /* simple “idle controls” overlay fade */
 const infoEl     = document.getElementById('info');
@@ -830,34 +827,15 @@ function animate(now){
 
   renderer.render(scene,camera);
 
-  /* minimap */
-  miniCtx.clearRect(0,0,MM_SIZE,MM_SIZE);
-  miniCtx.globalAlpha=0.4;
-  miniCtx.drawImage(hmImg,0,0,MM_SIZE,MM_SIZE);
-  miniCtx.globalAlpha=1;
-  const xN=(character.position.x+HALF)/(GRID*SPAN);
-  const zN=(character.position.z+HALF)/(GRID*SPAN);
-  const px=xN*MM_SIZE, py=(1-zN)*MM_SIZE;
-  miniCtx.fillStyle='#f00';
-  miniCtx.beginPath(); miniCtx.arc(px,py,5,0,Math.PI*2); miniCtx.fill();
-  miniCtx.fillStyle='#fff'; miniCtx.fillRect(px-5,py-5,10,10);
-  miniCtx.save(); miniCtx.globalAlpha=0.2;
-  miniCtx.fillStyle='#fff';
-  miniCtx.beginPath();
-  miniCtx.moveTo(MM_SIZE/2,8);
-  miniCtx.lineTo(MM_SIZE/2+6,22);
-  miniCtx.lineTo(MM_SIZE/2-6,22);
-  miniCtx.closePath(); miniCtx.fill();
-  miniCtx.font='12px sans-serif'; miniCtx.textAlign='center';
-  miniCtx.fillText('N',MM_SIZE/2,36); miniCtx.restore();
-    // draw the active target on the minimap
+  /* guide arrow */
   if (activeTarget) {
-    const tx = (activeTarget.x + HALF) / (GRID * SPAN) * MM_SIZE;
-    const tz = (1 - (activeTarget.z + HALF) / (GRID * SPAN)) * MM_SIZE;
-    miniCtx.fillStyle = '#ff0';            // yellow
-    miniCtx.beginPath();
-    miniCtx.arc(tx, tz, 6, 0, Math.PI * 2);
-    miniCtx.fill();
+    const dx = activeTarget.x - character.position.x;
+    const dz = activeTarget.z - character.position.z;
+    const ang = Math.atan2(dx, dz) - yaw;
+    arrowEl.style.display = 'block';
+    arrowEl.style.transform = `translateX(-50%) rotate(${ang}rad)`;
+  } else {
+    arrowEl.style.display = 'none';
   }
 
 }
