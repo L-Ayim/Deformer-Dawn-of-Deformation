@@ -262,6 +262,8 @@ document.body.appendChild(renderer.domElement);
 
 /* GPS path mesh */
 let pathMesh = null;
+/* directional paths to other players */
+const playerPathMeshes = new Map();
 
 /* simple “idle controls” overlay fade */
 const infoEl     = document.getElementById('info');
@@ -697,6 +699,7 @@ function makeRemoteAvatar(col){
     });
     remoteShots.set(s.id,true);
   });
+  updatePlayerPathMeshes();
 }
 
 /* ────────────────────────── INPUT HANDLERS ───────────────────────── */
@@ -976,6 +979,8 @@ function animate(now){
 
   renderer.render(scene,camera);
 
+  updatePlayerPathMeshes();
+
   /* GPS path */
   if (activeTarget && !pathMesh) {
     updatePathMesh();
@@ -1063,6 +1068,45 @@ function updatePathMesh() {
   scene.add(pathMesh);
 
   // path thickness tapers toward the destination – no arrows needed
+}
+
+function updatePlayerPathMeshes() {
+  if (!terrain || !character) return;
+  ghosts.forEach((av, id) => {
+    if (!av.visible) {
+      const old = playerPathMeshes.get(id);
+      if (old) {
+        scene.remove(old);
+        old.geometry.dispose();
+        old.material.dispose();
+        playerPathMeshes.delete(id);
+      }
+      return;
+    }
+
+    const start = character.position.clone();
+    const endY = meshHeightAt(av.position.x, av.position.z) + 0.05;
+    const end = new THREE.Vector3(av.position.x, endY, av.position.z);
+    const geo = createPathStrip(start, end, 1.2, 0.3, 60,
+                                myColor, av.userData.mat.color);
+
+    const prev = playerPathMeshes.get(id);
+    if (prev) {
+      scene.remove(prev);
+      prev.geometry.dispose();
+      prev.material.dispose();
+    }
+
+    const mesh = new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide
+      })
+    );
+    scene.add(mesh);
+    playerPathMeshes.set(id, mesh);
+  });
 }
 
 function spawnTerrainSpike(x,z,r,delay,height=1){
