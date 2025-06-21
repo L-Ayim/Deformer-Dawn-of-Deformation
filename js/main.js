@@ -139,6 +139,7 @@ window.onload = () => {
 /* ──────────────────────────── CONSTANTS ───────────────────────────── */
 const host = location.hostname;
 const WS_URL          = `ws://${host}:3000`;
+const TILE_URL        = `http://${host}:8081`;
 const GRID            = 300,  SPAN = 1,  HALF = GRID * SPAN / 2;
 const DEFORM_RADIUS   = 1,    DEFORM_DEPTH = 3;
 const SPEED_OUT       = 100,  SPEED_RETURN  = 120;
@@ -161,6 +162,7 @@ const projectiles = [];                   // my bullets + remote ones
 const projectilesGroup = new THREE.Group();  // kept for legacy; harmless
 const CLOCK       = new THREE.Clock();
 const tmpVec      = new THREE.Vector3();
+const objLoader   = new OBJLoader();
 
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
@@ -180,7 +182,7 @@ function updateScoreboard() {
 }
 let   character, bodyMesh, headMesh, Larm, Rarm, Lleg, Rleg;
 let   boxGeo, octGeo, bulletMat, loadedBullet = null;
-let   terrain, mapW, mapH, mapData, noise;
+let   terrain, noise;
 let   yaw = 0, pitch = 0;
 let   charging = false, chargeStart = 0, currentCharge = 0;
 let   vertVel = 0, onGround = false, flyMode = false;
@@ -318,35 +320,12 @@ case 'scoreUpdate': {
 });
 
 /* ─────────────────────────── TERRAIN LOAD ────────────────────────── */
-const hmImg = new Image();
-hmImg.src   = 'assets/heightmap.png';
-hmImg.onload = () => {
-  mapW = hmImg.width; mapH = hmImg.height;
-  const cv = document.createElement('canvas');
-  cv.width = mapW; cv.height = mapH;
-  const cx = cv.getContext('2d');
-  cx.drawImage(hmImg,0,0);
-  const raw = cx.getImageData(0,0,mapW,mapH).data;
-  mapData = new Float32Array(mapW*mapH);
-  for (let i=0;i<mapData.length;i++) mapData[i] = raw[i*4]/255;
-  noise = new SimplexNoise(mapSeed);
-
-  initTerrain();
-  initCharacter();
-  requestAnimationFrame(animate);
-};
+noise = new SimplexNoise(mapSeed);
+initTerrain();
+initCharacter();
+requestAnimationFrame(animate);
 
 /* ───────────────────────────── TERRAIN ───────────────────────────── */
-function getHeight(u,v){
-  const x=((u%mapW)+mapW)%mapW, z=((v%mapH)+mapH)%mapH;
-  const x0=Math.floor(x), z0=Math.floor(z),
-        x1=(x0+1)%mapW,  z1=(z0+1)%mapH;
-  const fx=x-x0, fz=z-z0;
-  const i00=mapData[z0*mapW+x0], i10=mapData[z0*mapW+x1];
-  const i01=mapData[z1*mapW+x0], i11=mapData[z1*mapW+x1];
-  const ix0=i00*(1-fx)+i10*fx, ix1=i01*(1-fx)+i11*fx;
-  return (ix0*(1-fz)+ix1*fz)*500;
-}
 function getNoise(u,v){
   let h=0, freq=NOISE_SCALE, amp=NOISE_AMP;
   for (let i=0;i<NOISE_OCTS;i++){
@@ -361,41 +340,39 @@ function sampleHybridNormal(u,v){
   const hD=getNoise(u,v-e), hU=getNoise(u,v+e);
   return new THREE.Vector3(hL-hR,2*e,hD-hU).normalize();
 }
+function loadTile(cx, cz){
+  return new Promise(res => {
+    objLoader.load(`${TILE_URL}/chunk_${cx}_${cz}.obj`, obj => {
+      const mesh = obj.children[0];
+      mesh.geometry.computeVertexNormals();
+      res(mesh);
+    });
+  });
+}
+
 function initTerrain(){
-  const size = GRID*SPAN;
-  const geo  = new THREE.PlaneGeometry(size,size,GRID,GRID);
-  geo.rotateX(-Math.PI/2);
-  const pos = geo.attributes.position;
-  for(let i=0;i<pos.count;i++){
-    const x = pos.getX(i)+size/2, z = pos.getZ(i)+size/2;
-    const u = x/SPAN, v = z/SPAN;
-    pos.setY(i, getHeight(u,v)+getNoise(u,v));
-  }
-  pos.needsUpdate=true;
-  geo.computeVertexNormals();
   const textureLoader = new THREE.TextureLoader();
   const diffuseMap = textureLoader.load('assets/ruggeddiffused.png');
-
   const overlayMap = textureLoader.load('assets/ruggedpeaks.jpg');
   const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
   diffuseMap.anisotropy = maxAnisotropy;
   overlayMap.anisotropy = maxAnisotropy;
   overlayMap.wrapS = overlayMap.wrapT = THREE.RepeatWrapping;
-  overlayMap.repeat.set(GRID * SPAN / 256, GRID * SPAN / 256);
-  geo.setAttribute('uv2', new THREE.BufferAttribute(geo.attributes.uv.array, 2));
+  overlayMap.repeat.set(1,1);
 
-terrain = new THREE.Mesh(
-  geo,
-  new THREE.MeshStandardMaterial({
+  const mat = new THREE.MeshStandardMaterial({
     map: diffuseMap,
     aoMap: overlayMap,
     aoMapIntensity: 1.5,
     metalness: 0.1,
     roughness: 0.9
-  })
-);
+  });
 
-  scene.add(terrain);
+  loadTile(0,0).then(mesh => {
+    terrain = mesh;
+    terrain.material = mat;
+    scene.add(terrain);
+  });
 }
 function deformTerrain(impact,radius,depth){
   const pos=terrain.geometry.attributes.position;
