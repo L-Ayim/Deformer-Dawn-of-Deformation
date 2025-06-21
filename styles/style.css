@@ -42,15 +42,35 @@ canvas {
   position: absolute;
   top: 50px;
   left: 50%;
-  width: 0;
-  height: 0;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 20px solid yellow;
+  width: 16px;
+  height: 24px;
   transform: translateX(-50%) rotate(0deg);
+  transform-origin: 50% 100%;
   pointer-events: none;
   z-index: 110;
   display: none;
+}
+#target-arrow::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  height: 14px;
+  background: yellow;
+  transform: translateX(-50%);
+}
+#target-arrow::after {
+  content: '';
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 10px solid yellow;
+  transform: translateX(-50%);
 }
 
 /* Leaderboard styling */
@@ -155,12 +175,19 @@ canvas {
   background: rgba(255,255,255,0.15);
   border: 2px solid white;
   border-radius: 50%;
-  color: white;
-  font-family: sans-serif;
-  font-size: 12px;
-  line-height: 60px;
-  text-align: center;
   z-index: 12;
+}
+#sprint-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 10px 0 10px 14px;
+  border-color: transparent transparent transparent white;
+  transform: translate(-40%, -50%);
 }
 #sprint-button:active {
   transform: scale(1.1);
