@@ -194,8 +194,6 @@ let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
 let   spectator   = false;
-let   myTeam      = null;
-const teams       = new Map();
 const scoreboardEl= document.getElementById('scoreboard');
 
 function updateHealthBar() {
@@ -380,16 +378,6 @@ socket.addEventListener('message', e => {
       }
     } break;
 
-    case 'teamJoin': {
-      // snapshot will update team; show a confirmation effect
-      let pos = character ? character.position.clone() : new THREE.Vector3();
-      ghosts.forEach(av=>{
-        if(av.userData.colorName===msg.with){
-          pos = av.position.clone().add(pos).multiplyScalar(0.5);
-        }
-      });
-      spawnTeamConfirmEffect(pos);
-    } break;
   }
 });
 
@@ -693,14 +681,11 @@ function makeRemoteAvatar(col){
     shieldTimer = pack[myId].shield || 0;
     speedTimer  = pack[myId].speed  || 0;
     doubleShotsLeft = pack[myId].double || 0;
-    myTeam = pack[myId].team || null;
-    teams.set(myId, myTeam);
   }
 
   /* ---------- players ---------- */
   for(const [id,st] of Object.entries(pack)){
     if(id===myId) continue;
-    teams.set(id, st.team || null);
     const av=ghosts.get(id) ?? makeRemoteAvatar(st.color);
     ghosts.set(id,av);
     av.position.set(st.x,st.y,st.z);
@@ -825,9 +810,6 @@ document.addEventListener('keydown',e=>{
       zHeld =true;
       if(flyMode&&now-lastZ<300) flyMode=false;
       lastZ=now; break;
-    case'KeyF':
-      attemptTeam();
-      break;
     case'Escape':teleport();break;
   }
 });
@@ -843,24 +825,6 @@ document.addEventListener('keyup',e=>{
     case'KeyZ':case'KeyZ':zHeld =false;break;
   }
 });
-
-function attemptTeam(){
-  if(!character) return;
-  let closestId=null; let best=Infinity;
-  ghosts.forEach((av,id)=>{
-    const d=av.position.distanceTo(character.position);
-    if(d<3&&d<best){best=d; closestId=id;}
-  });
-  if(closestId){
-    socket.send(JSON.stringify({t:'teamRequest', target:closestId}));
-    const av = ghosts.get(closestId);
-    if(av){
-      const mid = av.position.clone().add(character.position).multiplyScalar(0.5);
-      spawnTeamRequestEffect(mid);
-    }
-  }
-}
-
 
 
 /* ───────────────────────────── GAME LOOP ─────────────────────────── */
@@ -915,14 +879,13 @@ function animate(now){
 
     let hitPlayer = false;
     if(p.owner===myId){
-      ghosts.forEach((av,id)=>{
-        if(hitPlayer) return;
-        if(teams.get(id)&&teams.get(id)===myTeam) return;
-        if(avatarHitTest(av, prevPos, p.mesh.position)){
-          socket.send(JSON.stringify({t:'hitPlayer', target:id, shotId:p.id}));
-          flashMaterial(av.userData.mat);
-          spawnHitEffect(av.position.clone());
-          hitPlayer=true;
+        ghosts.forEach((av,id)=>{
+          if(hitPlayer) return;
+          if(avatarHitTest(av, prevPos, p.mesh.position)){
+            socket.send(JSON.stringify({t:'hitPlayer', target:id, shotId:p.id}));
+            flashMaterial(av.userData.mat);
+            spawnHitEffect(av.position.clone());
+            hitPlayer=true;
         }
       });
       if(hitPlayer){
@@ -1259,25 +1222,21 @@ function updateScoreboard(snapshotPlayers){
   const entries = Object.values(snapshotPlayers).map(p=>({
     color:p.color,
     kills:p.kills||0,
-    deaths:p.deaths||0,
-    team:p.team||null
+    deaths:p.deaths||0
   })).sort((a,b)=>b.kills-a.kills);
   const rows = entries.map(e => {
-    const teammate = myTeam && e.team && e.team === myTeam;
     const isMe = e.color === myColor.getStyle();
     const style = `color:${e.color};` +
-                  (teammate ? 'background:rgba(255,255,255,0.2);' : '') +
                   (isMe ? 'font-weight:bold;' : '');
     return `<tr style="${style}">`+
              `<td class="name">${e.color}</td>`+
-             `<td class="team">${e.team ? e.team : ''}</td>`+
              `<td class="kills">${e.kills}</td>`+
              `<td class="deaths">${e.deaths}</td>`+
            `</tr>`;
   }).join('');
   scoreboardEl.innerHTML =
     `<table>`+
-      `<tr><th>Player</th><th>Team</th><th>K</th><th>D</th></tr>`+
+      `<tr><th>Player</th><th>K</th><th>D</th></tr>`+
       rows+
     `</table>`;
 }
@@ -1307,14 +1266,6 @@ function spawnHitEffect(pos, color=0xff0000, duration=0.3){
   mesh.position.copy(pos);
   scene.add(mesh);
   hitEffects.push({ mesh, time:duration, total:duration });
-}
-
-function spawnTeamRequestEffect(pos){
-  spawnHitEffect(pos, 0x0000ff, 0.5);
-}
-
-function spawnTeamConfirmEffect(pos){
-  spawnHitEffect(pos, 0x00ff00, 0.7);
 }
 
 function flashMaterial(mat){
