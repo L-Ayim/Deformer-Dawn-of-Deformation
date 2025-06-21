@@ -222,12 +222,17 @@ miniCanvas.width = MM_SIZE; miniCanvas.height = MM_SIZE;
 
 /* simple “idle controls” overlay fade */
 const infoEl     = document.getElementById('info');
+const leaderboardEl = document.getElementById('leaderboard');
 let   showTimer  = null;
 ['mousemove','mousedown','keydown','touchstart'].forEach(evt =>
   document.addEventListener(evt, () => {
     infoEl.style.opacity = '0';
+    leaderboardEl.style.opacity = '0';
     clearTimeout(showTimer);
-    showTimer = setTimeout(() => infoEl.style.opacity = '1', 10000);
+    showTimer = setTimeout(() => {
+      infoEl.style.opacity = '1';
+      leaderboardEl.style.opacity = '1';
+    }, 10000);
   }, { passive:true })
 );
 
