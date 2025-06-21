@@ -12,6 +12,8 @@ Textures now use the maximum supported anisotropy value for crisper detail at gl
 - That path now forms a directional ribbon with a color gradient so you can
   immediately tell which way to head. The ribbon tapers from thick near you to
   thin at the target, removing the need for extra arrow markers.
+- Each remote player now has a similar gradient path from your position
+  to theirs so you can easily find them.
 
 ### Procedural Terrain
 
