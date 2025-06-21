@@ -11,6 +11,19 @@ export const remoteShots = new Map();
 export let myId = null;
 export let myColor = new THREE.Color(0x222222);
 export const scores = new Map();
+export let activeTarget = null;
+
+export function sendInput(input){
+  if(socket.readyState===1 && myId){
+    socket.send(JSON.stringify({ t:'input', input }));
+  }
+}
+
+export function sendState(state){
+  if(socket.readyState===1 && myId){
+    socket.send(JSON.stringify({ t:'state', state }));
+  }
+}
 
 export function updateScoreboard() {
   const ol = document.getElementById('leaderboard-list');
@@ -117,6 +130,7 @@ export function setupNetwork(scene, bulletGeo, targetHandlers){
         applySnapshot(msg, scene, bulletGeo);
         break;
       case 'newTarget': {
+        activeTarget = msg.target;
         targetHandlers.spawn(msg.target);
         break;
       }
