@@ -19,6 +19,12 @@ The terrain is now generated on the client using Simplex noise so no tile
 server or baking step is required. Simply start the web and WebSocket servers
 with `npm start` and connect.
 
+### Performance Options
+
+The renderer now caps pixel ratio at `0.75` and disables antialiasing by
+default. Adjust `PIXEL_RATIO_CAP` and `USE_ANTIALIAS` in `js/main.js` if you
+want to trade visual quality for higher frame rates.
+
 ### Gameplay
 
 - Press the shoot button again to recall your boomerang early if it's already flying.
