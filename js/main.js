@@ -226,6 +226,11 @@ document.body.appendChild(renderer.domElement);
 
 /* GPS path mesh */
 let pathMesh = null;
+const ARROW_SPACING = 8;
+const arrowGeom = new THREE.ConeGeometry(0.3, 0.8, 8);
+arrowGeom.rotateX(Math.PI / 2);
+const arrowMat  = new THREE.MeshBasicMaterial({ color: 0xffffff });
+let pathArrows = [];
 
 /* simple “idle controls” overlay fade */
 const infoEl     = document.getElementById('info');
@@ -301,6 +306,7 @@ case 'scoreUpdate': {
       pathMesh.geometry.dispose();
       pathMesh.material.dispose();
       pathMesh = null;
+      removePathArrows();
     }
     updatePathMesh();
     break;
@@ -731,6 +737,7 @@ function animate(now){
           pathMesh.geometry.dispose();
           pathMesh.material.dispose();
           pathMesh = null;
+          removePathArrows();
         }
       }
     }
@@ -913,6 +920,7 @@ function updatePathMesh() {
     pathMesh.geometry.dispose();
     pathMesh.material.dispose();
   }
+  removePathArrows();
   pathMesh = new THREE.Mesh(
     geo,
     new THREE.MeshBasicMaterial({
@@ -921,6 +929,32 @@ function updatePathMesh() {
     })
   );
   scene.add(pathMesh);
+
+  // add arrowheads along the strip
+  const dir = new THREE.Vector3().subVectors(end, start);
+  const len = dir.length();
+  if (len > 0) {
+    dir.set(dir.x, 0, dir.z).normalize();
+    const count = Math.floor(len / ARROW_SPACING);
+    for (let i = 1; i <= count; i++) {
+      const pos = start.clone().addScaledVector(dir, i * ARROW_SPACING);
+      pos.y = meshHeightAt(pos.x, pos.z) + 0.1;
+      const arrow = new THREE.Mesh(arrowGeom, arrowMat);
+      arrow.position.copy(pos);
+      arrow.rotation.y = Math.atan2(dir.x, dir.z);
+      scene.add(arrow);
+      pathArrows.push(arrow);
+    }
+  }
+}
+
+function removePathArrows() {
+  for (const a of pathArrows) {
+    scene.remove(a);
+    a.geometry.dispose();
+    a.material.dispose();
+  }
+  pathArrows.length = 0;
 }
 
 /* ─────────────────────────── HELPERS ─────────────────────────────── */
