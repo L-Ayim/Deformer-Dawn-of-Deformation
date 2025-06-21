@@ -68,7 +68,7 @@ canvas {
 }
 #joystick-zone {
   bottom: 20px; left: 20px;
-  width: 150px; height: 150px;
+  width: 200px; height: 200px;
 }
 #joystick-look-zone {
   top: 20px; right: 20px;
@@ -79,7 +79,7 @@ canvas {
 #shoot-button {
   display: none;
   position: absolute;
-  top: 30px; right: 160px;
+  bottom: 20px; right: 20px;
   width: 60px; height: 60px;
   background: rgba(255,255,255,0.15);
   border-radius: 50%;
@@ -115,63 +115,3 @@ canvas {
   transition: opacity 0.8s ease;
 }
 
-/* Jump / Fly Buttons */
-#up-button,
-#down-button {
-  display: none;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px; height: 60px;
-  background: rgba(255,255,255,0.15);
-  border: 2px solid white;
-  border-radius: 50%;
-  z-index: 12;
-}
-#up-button { bottom: 90px; }
-#down-button { bottom: 20px; }
-#sprint-button {
-  display: none;
-  position: absolute;
-  top: 30px;
-  right: 90px;
-  width: 60px;
-  height: 60px;
-  background: rgba(255,255,255,0.15);
-  border: 2px solid white;
-  border-radius: 50%;
-  z-index: 12;
-}
-#sprint-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 10px 0 10px 14px;
-  border-color: transparent transparent transparent white;
-  transform: translate(-40%, -50%);
-}
-#sprint-button:active {
-  transform: scale(1.1);
-  opacity: 0.9;
-}
-#up-button::before,
-#down-button::before {
-  content: '';
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 0; height: 0;
-  border-style: solid;
-  transform: translate(-50%, -50%);
-}
-#up-button::before {
-  border-width: 0 10px 12px 10px;
-  border-color: transparent transparent white transparent;
-}
-#down-button::before {
-  border-width: 12px 10px 0 10px;
-  border-color: white transparent transparent transparent;
-}
