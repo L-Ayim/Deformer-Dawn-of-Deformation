@@ -1,11 +1,13 @@
 // js/game.js - orchestrates game modules
 import { loadHeightmap, initTerrain, terrain, meshHeightAt, HALF, GRID, SPAN, sampleHybridNormal, hmImg, deformTerrain } from './terrain.js';
 import { initCharacter, character, headMesh, bodyMesh, Larm, Rarm, Lleg, Rleg, boxGeo, octGeo, projectiles, spawnLoadedBullet, catchBoomerang, loadedBullet, setAim, teleport } from './character.js';
-import { setupNetwork, sendInput, sendState, socket, myId, activeTarget } from './network.js';
+import { setupNetwork, sendInput, sendState, socket, myId, activeTarget, setMyName, names, ghosts } from './network.js';
 import { setupInput, move } from './input.js';
 
 export function startGame(){
   const mapSeed = '🌎';
+  const userName = prompt('Enter your name:', 'Player') || 'Player';
+  setMyName(userName);
   const scene   = new THREE.Scene();
   let skyMesh;
   const camera  = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 500);
@@ -21,6 +23,9 @@ export function startGame(){
   renderer.setPixelRatio(Math.min(devicePixelRatio,1));
   renderer.setSize(innerWidth, innerHeight);
   document.body.appendChild(renderer.domElement);
+
+  const labelLayer = document.getElementById('name-layer');
+  const nameLabels = new Map();
 
   const miniCanvas = document.getElementById('minimap');
   const miniCtx    = miniCanvas.getContext('2d');
@@ -199,6 +204,29 @@ export function startGame(){
       );
       camera.position.copy(character.position).add(camOff);
       camera.lookAt(character.position);
+
+      const allPlayers = new Map([[myId, character], ...ghosts.entries()]);
+      allPlayers.forEach((obj,id)=>{
+        let label = nameLabels.get(id);
+        if(!label){
+          label = document.createElement('div');
+          label.className = 'name-label';
+          labelLayer.appendChild(label);
+          nameLabels.set(id,label);
+        }
+        label.textContent = names.get(id) || (id===myId?userName:id);
+        const pos = obj.position.clone();
+        pos.y += 3.5;
+        pos.project(camera);
+        const x = (pos.x * 0.5 + 0.5) * innerWidth;
+        const y = (-pos.y * 0.5 + 0.5) * innerHeight;
+        label.style.transform = `translate(-50%,-50%) translate(${x}px,${y}px)`;
+        label.style.display = obj.visible===false ? 'none' : 'block';
+      });
+      // remove labels for departed players
+      nameLabels.forEach((el,id)=>{
+        if(!allPlayers.has(id)) { el.remove(); nameLabels.delete(id); }
+      });
 
       if(socket.readyState===1 && myId){
         sendState({ x:character.position.x, y:character.position.y, z:character.position.z,

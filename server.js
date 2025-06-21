@@ -55,11 +55,11 @@ function pickNamedColour() {
 function packSnapshot() {
   return JSON.stringify({
     t: 'snapshot',
-    // players: id → { x,y,z,yaw,pitch,flyMode,color,score }
+    // players: id → { x,y,z,yaw,pitch,flyMode,color,score,name }
     players: Object.fromEntries(
       [...players.entries()].map(([id,p]) => [
         id,
-        { ...p.state, color: p.color, score: p.score || 0 }
+        { ...p.state, color: p.color, score: p.score || 0, name: p.name || '' }
       ])
     ),
     // array of projectile records
@@ -89,7 +89,7 @@ wss.on('connection', ws => {
   const color = pickNamedColour();
 
   // Initialize player state + score
-  players.set(id, { input:{}, state:{}, color, score: 0 });
+  players.set(id, { input:{}, state:{}, color, score: 0, name: '' });
   scores.set(id, 0);
 
   // Send welcome packet with assigned ID, color, and noise seed
@@ -111,6 +111,15 @@ wss.on('connection', ws => {
       case 'state':
         players.get(id).state = msg.state;
         break;
+
+      // Player provides their display name
+      case 'setName': {
+        const p = players.get(id);
+        if (p) p.name = msg.name.substring(0,20);
+        const nameMsg = JSON.stringify({ t:'nameUpdate', id, name:p.name });
+        wss.clients.forEach(c => c.readyState===1 && c.send(nameMsg));
+        break;
+      }
 
       // A new boomerang shot fired
       case 'shot': {
@@ -150,7 +159,8 @@ wss.on('connection', ws => {
           // Broadcast full scoreboard to all clients
           const scoreMsg = JSON.stringify({
             t: 'scoreUpdate',
-            scores: Object.fromEntries(scores)
+            scores: Object.fromEntries(scores),
+            scorer: id
           });
           wss.clients.forEach(c =>
             c.readyState===1 && c.send(scoreMsg)
