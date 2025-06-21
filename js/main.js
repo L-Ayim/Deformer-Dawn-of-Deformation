@@ -254,6 +254,16 @@ case 'scoreUpdate': {
       myId    = msg.id;
       myColor = new THREE.Color().setStyle(msg.color);
 
+      // Update avatar colors if we've already built the character
+      if (bodyMesh) {
+        bodyMesh.material.color.copy(myColor);
+        bodyMesh.material.emissive.copy(myColor).multiplyScalar(0.25);
+      }
+      if (bulletMat) {
+        bulletMat.color.copy(myColor);
+        bulletMat.emissive.copy(myColor).multiplyScalar(0.25);
+      }
+
       // NOW it’s safe to seed your entry
       scores.set(myId, 0);
       updateScoreboard();
