@@ -18,11 +18,13 @@ const TERRAIN_HALF  = 100;
 const TARGET_RADIUS = 5;
 const MAX_HEALTH    = 100;
 const PROJECTILE_DAMAGE = 25;
-const TERRAIN_ATTACK_INTERVAL = 3000;
+// Base delay between terrain attacks (ms). Increased to lighten load
+const TERRAIN_ATTACK_INTERVAL = 6000;
 const TERRAIN_ATTACK_RADIUS   = 3;
 const TERRAIN_SPIKE_DELAY     = 1000; // ms delay before damage applies
 const TERRAIN_DAMAGE = 25;
-const NUM_SPIKES_PER_ATTACK   = 15;
+// Fewer spikes per attack for smoother gameplay
+const NUM_SPIKES_PER_ATTACK   = 8;
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
