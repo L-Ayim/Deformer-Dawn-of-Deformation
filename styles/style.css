@@ -131,3 +131,22 @@ canvas {
 }
 #fly-toggle-button { bottom: 230px; }
 
+/* Health bar */
+#health-bar {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 20px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid #fff;
+  border-radius: 4px;
+  z-index: 12;
+}
+#health-fill {
+  height: 100%;
+  width: 100%;
+  background: #f00;
+}
+
