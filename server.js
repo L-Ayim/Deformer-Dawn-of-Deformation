@@ -92,7 +92,7 @@ function terrainAttack(){
   for(let i=0;i<NUM_SPIKES_PER_ATTACK;i++){
     const x=(Math.random()*2-1)*TERRAIN_HALF;
     const z=(Math.random()*2-1)*TERRAIN_HALF;
-    const h=0.5+Math.random()*2.5;
+    const h=2+Math.random()*6;
     spikes.push({x,z,h});
     const msg=JSON.stringify({
       t:'terrainSpike', x, z, r:TERRAIN_ATTACK_RADIUS, delay:TERRAIN_SPIKE_DELAY, h
@@ -102,8 +102,10 @@ function terrainAttack(){
   setTimeout(()=>{
     for(const [id,p] of players){
       for(const s of spikes){
-        const dx=(p.state.x||0)-s.x; const dz=(p.state.z||0)-s.z;
-        if(Math.hypot(dx,dz)<=TERRAIN_ATTACK_RADIUS){
+        const dx=(p.state.x||0)-s.x;
+        const dz=(p.state.z||0)-s.z;
+        const dy=(p.state.y||0);
+        if(Math.hypot(dx,dz)<=TERRAIN_ATTACK_RADIUS && dy<=s.h+2){
           p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
           if(p.health<=0){
             wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));

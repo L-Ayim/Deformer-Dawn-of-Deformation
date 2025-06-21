@@ -576,7 +576,7 @@ function makeRemoteAvatar(col){
   const hbMat = new THREE.SpriteMaterial({ color:0x00ff00 });
   const hb    = new THREE.Sprite(hbMat);
   hb.scale.set(1,0.1,1);
-  hb.position.set(0,3.6,0);
+  hb.position.set(0,4.2,0);
   root.add(hb);
   root.userData={ body,head,Larm,Rarm,Lleg,Rleg, mat,
     boxGeo, octGeo:new THREE.OctahedronGeometry(1,0).rotateX(Math.PI/2),
@@ -779,10 +779,13 @@ function animate(now){
     const hitGround=p.mesh.position.y<=groundY;
 
     let hitPlayer = false;
-    if(p.owner===myId && !p.returning){
+    if(p.owner===myId){
       ghosts.forEach((av,id)=>{
         if(hitPlayer) return;
-        const d=p.mesh.position.distanceTo(av.position);
+        const headPos = av.userData.head.getWorldPosition(new THREE.Vector3());
+        const bodyPos = av.userData.body.getWorldPosition(new THREE.Vector3());
+        const d = Math.min(p.mesh.position.distanceTo(headPos),
+                          p.mesh.position.distanceTo(bodyPos));
         if(d<1){
           socket.send(JSON.stringify({t:'hitPlayer', target:id, shotId:p.id}));
           flashMaterial(av.userData.mat);
@@ -840,7 +843,12 @@ function animate(now){
   for(let i=spikes.length-1;i>=0;i--){
     const s=spikes[i];
     s.age += dt;
+    if(s.age >= s.delay-0.5) s.disc.visible = true;
+    const ratio = THREE.MathUtils.clamp(s.age / s.delay, 0, 1);
+    s.spike.scale.y = Math.max(0.001, ratio);
     if(s.age >= s.delay){
+      scene.remove(s.disc); s.disc.geometry.dispose(); s.disc.material.dispose();
+      scene.remove(s.spike); s.spike.geometry.dispose(); s.spike.material.dispose();
       deformTerrain(new THREE.Vector3(s.x,0,s.z), s.r, -DEFORM_DEPTH * s.height);
       spikes.splice(i,1);
     }
@@ -1049,7 +1057,21 @@ function updatePathMesh() {
 }
 
 function spawnTerrainSpike(x,z,r,delay,height=1){
-  spikes.push({ x, z, r, delay, age:0, height });
+  const y = meshHeightAt(x,z);
+  const baseGeo = new THREE.CircleGeometry(r, 16);
+  const baseMat = new THREE.MeshBasicMaterial({ color:0xff0000, opacity:0.5, transparent:true });
+  const disc = new THREE.Mesh(baseGeo, baseMat);
+  disc.rotation.x = -Math.PI/2;
+  disc.position.set(x, y + 0.05, z);
+  disc.visible = false;
+  const spikeGeo = new THREE.CylinderGeometry(r*0.3, r*0.3, height, 6);
+  const spikeMat = new THREE.MeshStandardMaterial({ color:0x883333 });
+  const spike = new THREE.Mesh(spikeGeo, spikeMat);
+  spike.position.set(x, y + height/2, z);
+  spike.scale.y = 0.001;
+  scene.add(disc);
+  scene.add(spike);
+  spikes.push({ x, z, r, delay, age:0, height, disc, spike });
 }
 
 function spawnHitEffect(pos){
