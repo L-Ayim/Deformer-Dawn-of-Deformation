@@ -188,8 +188,13 @@ function updateHealthBar() {
 function updateLivesDisplay() {
   const el = document.getElementById('life-count');
   if (el) {
-    el.textContent = myLives;
+    el.innerHTML = '';
     el.style.color = myColor.getStyle();
+    for (let i = 0; i < myLives; i++) {
+      const bar = document.createElement('span');
+      bar.className = 'life-bar';
+      el.appendChild(bar);
+    }
   }
 }
 let   character, bodyMesh, headMesh, Larm, Rarm, Lleg, Rleg;
@@ -1147,8 +1152,14 @@ function updateRemoteLabels() {
       return;
     }
     label.style.display = 'block';
-    label.textContent = av.userData.lives ?? START_LIVES;
+    const lives = av.userData.lives ?? START_LIVES;
+    label.innerHTML = '';
     label.style.color = av.userData.mat.color.getStyle();
+    for (let i = 0; i < lives; i++) {
+      const bar = document.createElement('span');
+      bar.className = 'life-bar';
+      label.appendChild(bar);
+    }
     const pos = av.userData.head.getWorldPosition(new THREE.Vector3());
     pos.project(camera);
     const x = (pos.x * 0.5 + 0.5) * innerWidth;
