@@ -852,13 +852,15 @@ window.addEventListener('resize',()=>{
   renderer.setSize(innerWidth,innerHeight);
 });
 
-function createPathStrip(from, to, width = 1, segments = 60) {
+function createPathStrip(from, to, width = 1, segments = 60, startCol, endCol) {
   const dx = to.x - from.x;
   const dz = to.z - from.z;
   const len = Math.hypot(dx, dz) || 1;
   const nx = -dz / len, nz = dx / len;
 
-  const pos = new Float32Array((segments * 2 + 2) * 3);
+  const vertCount = segments * 2 + 2;
+  const pos = new Float32Array(vertCount * 3);
+  const col = new Float32Array(vertCount * 3);
   const idx = [];
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
@@ -869,12 +871,21 @@ function createPathStrip(from, to, width = 1, segments = 60) {
     const offZ = nz * width * 0.5;
 
     const vi = i * 6;
+    const ci = i * 6;
+
+    const r = THREE.MathUtils.lerp(startCol.r, endCol.r, t);
+    const g = THREE.MathUtils.lerp(startCol.g, endCol.g, t);
+    const b = THREE.MathUtils.lerp(startCol.b, endCol.b, t);
+
     pos[vi]     = x + offX;
     pos[vi + 1] = y;
     pos[vi + 2] = z + offZ;
     pos[vi + 3] = x - offX;
     pos[vi + 4] = y;
     pos[vi + 5] = z - offZ;
+
+    col[ci]     = r; col[ci + 1] = g; col[ci + 2] = b;
+    col[ci + 3] = r; col[ci + 4] = g; col[ci + 5] = b;
     if (i < segments) {
       const a = i * 2;
       const b = i * 2 + 1;
@@ -885,6 +896,7 @@ function createPathStrip(from, to, width = 1, segments = 60) {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
   return g;
@@ -895,7 +907,7 @@ function updatePathMesh() {
   const start = character.position.clone();
   const endY = meshHeightAt(activeTarget.x, activeTarget.z) + 0.05;
   const end = new THREE.Vector3(activeTarget.x, endY, activeTarget.z);
-  const geo = createPathStrip(start, end, 1, 80);
+  const geo = createPathStrip(start, end, 1, 80, myColor, new THREE.Color(0xffff00));
   if (pathMesh) {
     scene.remove(pathMesh);
     pathMesh.geometry.dispose();
@@ -903,7 +915,10 @@ function updatePathMesh() {
   }
   pathMesh = new THREE.Mesh(
     geo,
-    new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      side: THREE.DoubleSide
+    })
   );
   scene.add(pathMesh);
 }

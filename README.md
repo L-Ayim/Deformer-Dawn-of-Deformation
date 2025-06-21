@@ -9,3 +9,5 @@ Textures now use the maximum supported anisotropy value for crisper detail at gl
 - Sprint button arrow is now drawn with CSS for a consistent look.
 - The on-screen arrow guiding to targets has been replaced by an in-world
   GPS-style path that dynamically updates.
+- That path now forms a directional ribbon with a color gradient so you can
+  immediately tell which way to head.
