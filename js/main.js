@@ -632,8 +632,10 @@ document.addEventListener('pointerlockchange',()=>{
   }else document.removeEventListener('mousemove',onMouseMove);
 });
 function onMouseMove(e){
-  const S=0.002; yaw-=e.movementX*S; pitch-=e.movementY*S; // invert vertical drag
-  pitch=Math.max(-Math.PI/4,Math.min(Math.PI/4,pitch));
+  const S = 0.002;
+  yaw   -= e.movementX * S;
+  pitch += e.movementY * S; // invert the mouse's vertical look
+  pitch  = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, pitch));
 }
 document.addEventListener('keydown',e=>{
   if(e.repeat) return; const now=performance.now();
