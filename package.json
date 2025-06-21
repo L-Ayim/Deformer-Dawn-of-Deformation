@@ -9,12 +9,12 @@
     "start": "concurrently -k -n SITE,SOCKET \"npm:site\" \"npm:socket\""
   },
   "dependencies": {
-    "uuid": "^9.0.0",
-    "ws": "^8.15.0"
+    "uuid": "^11.1.0",
+    "ws": "^8.18.2"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
-    "live-server": "^1.2.2"
+    "live-server": "^1.2.0"
   }
 }
