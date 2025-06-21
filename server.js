@@ -56,6 +56,7 @@ let powerups = [];
 // Pending team requests: id -> Map(targetId -> timestamp)
 const pendingTeam = new Map();
 const TEAM_REQ_WINDOW_MS = 2000;
+let nextTeamNumber = 1; // sequential team ids
 
 /* ──────────── NAMED COLOR PALETTE ────────────────────── */
 // A set of high-contrast color names
@@ -335,11 +336,11 @@ wss.on('connection', ws => {
             const tMap = pendingTeam.get(msg.target);
             const tTime = tMap && tMap.get(id);
             if (tTime && now - tTime <= TEAM_REQ_WINDOW_MS) {
-              const teamId = requester.team || target.team || requester.color;
+              const teamId = requester.team || target.team || nextTeamNumber++;
               requester.team = teamId;
               target.team = teamId;
-              requester.socket.send(JSON.stringify({ t:'teamJoin', with: target.color }));
-              target.socket.send(JSON.stringify({ t:'teamJoin', with: requester.color }));
+              requester.socket.send(JSON.stringify({ t:'teamJoin', with: target.color, team: teamId }));
+              target.socket.send(JSON.stringify({ t:'teamJoin', with: requester.color, team: teamId }));
               map.delete(msg.target);
               if (tMap) tMap.delete(id);
             }

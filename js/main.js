@@ -381,8 +381,14 @@ socket.addEventListener('message', e => {
     } break;
 
     case 'teamJoin': {
-      // no action needed, snapshot will update team
-      alert(`Teamed up with ${msg.with}`);
+      // snapshot will update team; show a confirmation effect
+      let pos = character ? character.position.clone() : new THREE.Vector3();
+      ghosts.forEach(av=>{
+        if(av.userData.colorName===msg.with){
+          pos = av.position.clone().add(pos).multiplyScalar(0.5);
+        }
+      });
+      spawnTeamConfirmEffect(pos);
     } break;
   }
 });
@@ -847,6 +853,11 @@ function attemptTeam(){
   });
   if(closestId){
     socket.send(JSON.stringify({t:'teamRequest', target:closestId}));
+    const av = ghosts.get(closestId);
+    if(av){
+      const mid = av.position.clone().add(character.position).multiplyScalar(0.5);
+      spawnTeamRequestEffect(mid);
+    }
   }
 }
 
@@ -981,8 +992,9 @@ function animate(now){
       scene.remove(e.mesh); e.mesh.geometry.dispose(); e.mesh.material.dispose();
       hitEffects.splice(i,1);
     }else{
-      e.mesh.material.opacity=e.time/0.3;
-      e.mesh.scale.setScalar(1+(0.3-e.time));
+      const prog = 1 - e.time / e.total;
+      e.mesh.material.opacity = e.time / e.total;
+      e.mesh.scale.setScalar(1 + prog);
     }
   }
 
@@ -1288,13 +1300,21 @@ function spawnTerrainSpike(x,z,r,delay,height=1){
   spikes.push({ x, z, r, delay, age:0, height, disc, spike });
 }
 
-function spawnHitEffect(pos){
+function spawnHitEffect(pos, color=0xff0000, duration=0.3){
   const g = new THREE.SphereGeometry(0.3,8,8);
-  const m = new THREE.MeshBasicMaterial({ color:0xff0000, transparent:true });
+  const m = new THREE.MeshBasicMaterial({ color, transparent:true });
   const mesh = new THREE.Mesh(g,m);
   mesh.position.copy(pos);
   scene.add(mesh);
-  hitEffects.push({ mesh, time:0.3 });
+  hitEffects.push({ mesh, time:duration, total:duration });
+}
+
+function spawnTeamRequestEffect(pos){
+  spawnHitEffect(pos, 0x0000ff, 0.5);
+}
+
+function spawnTeamConfirmEffect(pos){
+  spawnHitEffect(pos, 0x00ff00, 0.7);
 }
 
 function flashMaterial(mat){
