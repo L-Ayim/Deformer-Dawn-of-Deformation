@@ -55,7 +55,7 @@ window.onload = () => {
       lastLX = t.clientX;
       lastLY = t.clientY;
       yaw   -= dx * 0.005;
-      pitch -= dy * 0.005;
+      pitch += dy * 0.005; // invert vertical drag direction
       pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, pitch));
     }, { passive: false });
 
@@ -617,7 +617,7 @@ document.addEventListener('pointerlockchange',()=>{
   }else document.removeEventListener('mousemove',onMouseMove);
 });
 function onMouseMove(e){
-  const S=0.002; yaw-=e.movementX*S; pitch+=e.movementY*S;
+  const S=0.002; yaw-=e.movementX*S; pitch-=e.movementY*S; // invert vertical drag
   pitch=Math.max(-Math.PI/4,Math.min(Math.PI/4,pitch));
 }
 document.addEventListener('keydown',e=>{
