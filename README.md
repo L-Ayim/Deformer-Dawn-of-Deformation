@@ -1,5 +1,11 @@
 This project renders a deformable landscape in WebGL.
 
+## Getting Started
+
+1. Install dependencies with `npm install`.
+2. Launch both the static site and WebSocket server using `npm start`.
+
+
 ### Graphics Enhancement
 
 Textures now use the maximum supported anisotropy value for crisper detail at glancing angles.
