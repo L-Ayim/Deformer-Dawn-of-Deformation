@@ -10,5 +10,5 @@ Textures now use the maximum supported anisotropy value for crisper detail at gl
 - The on-screen arrow guiding to targets has been replaced by an in-world
   GPS-style path that dynamically updates.
 - That path now forms a directional ribbon with a color gradient so you can
-  immediately tell which way to head.
-- Arrow markers are spaced along that strip to reinforce the direction of travel.
+  immediately tell which way to head. The ribbon tapers from thick near you to
+  thin at the target, removing the need for extra arrow markers.
