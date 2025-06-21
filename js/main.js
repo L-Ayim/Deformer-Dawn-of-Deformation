@@ -150,6 +150,9 @@ const MAX_DT          = 0.05;
 const MAX_HEALTH      = 100;
 const SPIKE_LIFE      = 0.3;               // seconds spike remains visible
 const HIT_PULL_RADIUS = 4.0;               // range for projectile attraction
+const SHIELD_DURATION = 10;
+const SPEED_DURATION  = 10;
+const DOUBLE_SHOTS    = 10;
 const mapSeed         = '🌎';                 // constant → identical terrain
 const noiseSky        = new SimplexNoise(mapSeed + 'sky');
 
@@ -166,6 +169,9 @@ const spikes      = [];                   // active terrain spikes
 const hitEffects  = [];                   // transient hit visuals
 const damageTimers= new Map();            // material → remaining flash time
 let   prevMyHealth= MAX_HEALTH;
+let   shieldTimer = 0;
+let   speedTimer  = 0;
+let   doubleShotsLeft = 0;
 
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
@@ -186,10 +192,10 @@ let   manualSprint = false, shiftHeld = false, joystickIntensity = 0;
 let   lastSpace = 0, lastZ = 0;
 const move = { f:0, b:0, l:0, r:0 };
 
-// ─────────── TARGET STATE ───────────
-let activeTarget   = null;   // { id, x, z }
+// ─────────── POWER-UP STATE ───────────
 const TARGET_RADIUS = 5;     // must match server’s radius
-let targetMesh     = null;   // Three.js mesh for the pillar/flag
+let powerups   = [];         // array of {id,x,z,type}
+const powerupMeshes = new Map();
 
 
 /* ──────────────────── DOM + RENDER TARGET SET-UP ─────────────────── */
@@ -299,26 +305,6 @@ socket.addEventListener('message', e => {
     case 'snapshot':
       applySnapshot(msg);
       break;
-    case 'newTarget': {
-    // server just spawned one
-    activeTarget = msg.target;            // { id, x, z }
-
-      // remove any old marker
-      if (targetMesh) {
-     scene.remove(targetMesh);
-      targetMesh.geometry.dispose();
-      targetMesh.material.dispose();
-    }
-
-    // create a simple pillar or flag at (x,z)
-    const height   = meshHeightAt(activeTarget.x, activeTarget.z);
-    const geom     = new THREE.CylinderGeometry(0.5,0.5, 3, 8);
-    const mat      = new THREE.MeshStandardMaterial({ color: 0xffff00 });
-    targetMesh     = new THREE.Mesh(geom, mat);
-    targetMesh.position.set(activeTarget.x, height + 1.5, activeTarget.z);
-    scene.add(targetMesh);
-    break;
-    }
 
     case 'crater': {
       const { x,z,r,d } = msg.crater;
@@ -508,19 +494,29 @@ function shootProjectile(){
   loadedBullet.position.copy(start).add(dir.clone().multiplyScalar(0.6));
   scene.add(loadedBullet);
 
-  projectiles.push({
-    mesh:loadedBullet, velocity:dir.clone().multiplyScalar(speedOut),
-    travelled:0, maxRange:rangeOut, craterRad:craterR,
-    returning:false, ttl:TTL_SECONDS, id:undefined,
-    owner: myId
-  });
-
-  if(socket.readyState===1&&myId){
-    socket.send(JSON.stringify({
-      t:'shot',
-      data:{ x:start.x,y:start.y,z:start.z, dir, c }
-    }));
+  const shots = doubleShotsLeft>0 ? 2 : 1;
+  for(let s=0;s<shots;s++){
+    const mesh = s===0 ? loadedBullet : loadedBullet.clone();
+    if(s===1) scene.add(mesh);
+    projectiles.push({
+      mesh,
+      velocity:dir.clone().multiplyScalar(speedOut),
+      travelled:0,
+      maxRange:rangeOut,
+      craterRad:craterR,
+      returning:false,
+      ttl:TTL_SECONDS,
+      id:undefined,
+      owner: myId
+    });
+    if(socket.readyState===1&&myId){
+      socket.send(JSON.stringify({
+        t:'shot',
+        data:{ x:start.x,y:start.y,z:start.z, dir, c }
+      }));
+    }
   }
+  if(doubleShotsLeft>0) doubleShotsLeft--;
   loadedBullet=null;
 }
 
@@ -584,7 +580,31 @@ function makeRemoteAvatar(col){
 }
 
 /* ────────────────────────── SNAPSHOT HANDLER ─────────────────────── */
-  function applySnapshot({ players:pack, projectiles:shots }){
+  function applySnapshot({ players:pack, projectiles:shots, powerups:pus }){
+  if(pus){
+    const seen=new Set();
+    pus.forEach(pu=>{
+      seen.add(pu.id);
+      if(!powerupMeshes.has(pu.id)){
+        const color = pu.type==='health'?0xffff00:
+                      pu.type==='double'?0x00ffff:
+                      pu.type==='shield'?0x00ff00:0xff00ff;
+        const geom=new THREE.CylinderGeometry(0.5,0.5,3,8);
+        const mat=new THREE.MeshStandardMaterial({color});
+        const mesh=new THREE.Mesh(geom,mat);
+        const h=meshHeightAt(pu.x,pu.z);
+        mesh.position.set(pu.x,h+1.5,pu.z);
+        scene.add(mesh); powerupMeshes.set(pu.id,mesh);
+      }
+    });
+    powerupMeshes.forEach((mesh,id)=>{
+      if(!seen.has(id)){
+        scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose();
+        powerupMeshes.delete(id);
+      }
+    });
+    powerups = pus;
+  }
   if (pack[myId] && typeof pack[myId].health === 'number') {
     const newH = pack[myId].health;
     if(newH < prevMyHealth && bodyMesh){
@@ -599,6 +619,9 @@ function makeRemoteAvatar(col){
       bodyMesh.visible = scale > 0;
     }
     updateHealthBar();
+    shieldTimer = pack[myId].shield || 0;
+    speedTimer  = pack[myId].speed  || 0;
+    doubleShotsLeft = pack[myId].double || 0;
   }
 
   /* ---------- players ---------- */
@@ -748,6 +771,8 @@ function animate(now){
   if(!character || now-lastFrame<1000/60) return;
   lastFrame=now;
   const dt=Math.min(CLOCK.getDelta(),MAX_DT);
+  if(shieldTimer>0) shieldTimer=Math.max(0,shieldTimer-dt);
+  if(speedTimer>0) speedTimer=Math.max(0,speedTimer-dt);
 
   /* send raw input */
   if(socket.readyState===1&&myId){
@@ -795,20 +820,17 @@ function animate(now){
       }
     }
     if(hitGround){
-          if (hitGround && activeTarget) {
-      // see if we’re within radius of the active target
-      const dx = p.mesh.position.x - activeTarget.x;
-      const dz = p.mesh.position.z - activeTarget.z;
-      if (Math.hypot(dx, dz) <= TARGET_RADIUS) {
-        // first hit! tell the server
-        socket.send(JSON.stringify({
-          t: 'hitTarget',
-          targetId: activeTarget.id
-        }));
-        // clear locally so we only send once
-        activeTarget = null;
+      for(let i=0;i<powerups.length;i++){
+        const pu=powerups[i];
+        const dx=p.mesh.position.x-pu.x;
+        const dz=p.mesh.position.z-pu.z;
+        if(Math.hypot(dx,dz)<=TARGET_RADIUS){
+          socket.send(JSON.stringify({t:'pickup', powerupId:pu.id}));
+          const mesh=powerupMeshes.get(pu.id);
+          if(mesh){scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); powerupMeshes.delete(pu.id);} 
+          powerups.splice(i,1); i--; 
+        }
       }
-    }
 
       deformTerrain(p.mesh.position.clone(),p.craterRad,DEFORM_DEPTH);
       if(socket.readyState===1&&myId){
@@ -892,7 +914,8 @@ function animate(now){
   if(dir.lengthSq()){
     dir.normalize().applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
     const baseSpeed = flyMode ? 20 : 10;
-    const speedMult = isMobile ? 1 + joystickIntensity : (shiftHeld ? 2 : 1);
+    let speedMult = isMobile ? 1 + joystickIntensity : (shiftHeld ? 2 : 1);
+    if(speedTimer>0) speedMult *= 2;
     character.position.addScaledVector(dir, baseSpeed * speedMult * dt);
   }
 
@@ -1138,9 +1161,7 @@ function applyHitPull(p, dt){
       av.userData.body.getWorldPosition(tmpVec);
       test(tmpVec.clone());
     });
-    if(activeTarget && targetMesh){
-      test(targetMesh.position);
-    }
+    powerupMeshes.forEach(mesh=>{ test(mesh.position); });
   } else {
     if(headMesh){ headMesh.getWorldPosition(tmpVec); test(tmpVec.clone()); }
     if(bodyMesh){ bodyMesh.getWorldPosition(tmpVec); test(tmpVec.clone()); }
