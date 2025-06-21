@@ -16,7 +16,7 @@ const NOISE_SEED = 'sig-terrain-v1';
 // Bounds for where targets can spawn
 const TERRAIN_HALF  = 100;
 const TARGET_RADIUS = 5;
-const MAX_HEALTH    = 100;
+const MAX_HEALTH    = 150;
 const PROJECTILE_DAMAGE = 25;
 // Base delay between terrain attacks (ms). Increased to lighten load
 // Random spikes occur roughly five times per minute while
@@ -49,6 +49,8 @@ const wss = new WebSocketServer({ port: PORT });
 const players = new Map();
 // Array of active boomerang projectiles
 const projectiles = [];
+// Round length (ms)
+const ROUND_LENGTH_MS = 180000; // 3 minutes
 // Running ID for each new shot
 let nextShotId = 0;
 // Power-ups present in the world
@@ -110,8 +112,35 @@ function spawnInitialPowerups(){
     }
   }
 }
-// Spawn once on startup
-spawnInitialPowerups();
+
+let roundTimer = null;
+
+function startRound(){
+  spawnInitialPowerups();
+  for(const p of players.values()){
+    p.health = MAX_HEALTH;
+    p.dead = false;
+    p.kills = 0;
+  }
+  wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'roundStart'})));
+  scheduleRoundEnd();
+}
+
+function endRound(){
+  const board=[...players.values()].map(p=>({color:p.color,kills:p.kills||0}))
+    .sort((a,b)=>b.kills-a.kills);
+  wss.clients.forEach(c=>c.readyState===1&&
+    c.send(JSON.stringify({t:'roundEnd',board})));
+  setTimeout(startRound,5000);
+}
+
+function scheduleRoundEnd(){
+  clearTimeout(roundTimer);
+  roundTimer=setTimeout(endRound,ROUND_LENGTH_MS);
+}
+
+// Start first round
+startRound();
 
 function sendSpike(x, z, h){
   const msg = JSON.stringify({
@@ -134,9 +163,9 @@ function applySpikeDamage(spikes){
         if(Math.hypot(dx,dz)<=TERRAIN_ATTACK_RADIUS && dy<=s.h+2){
           if(p.shield>0) break;
           p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
-          if(p.health<=0){
-            wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id}))); 
-            p.health=MAX_HEALTH;
+          if(p.health<=0 && !p.dead){
+            p.dead = true;
+            wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
           }
           break;
         }
@@ -193,7 +222,9 @@ wss.on('connection', ws => {
     health: MAX_HEALTH,
     shield: 0,
     speed: 0,
-    doubleShots: 0
+    doubleShots: 0,
+    kills: 0,
+    dead: false
   });
 
   // Send welcome packet with assigned ID, color, and noise seed
@@ -203,6 +234,10 @@ wss.on('connection', ws => {
   ws.on('message', raw => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+
+    const me = players.get(id);
+    if(!me) return;
+    if(me.dead && msg.t !== 'input' && msg.t !== 'state') return;
 
     switch (msg.t) {
 
@@ -270,21 +305,23 @@ wss.on('connection', ws => {
 
       case 'hitPlayer': {
         const target = players.get(msg.target);
-        if (target) {
+        if (target && !target.dead) {
           if (target.shield > 0) break;
           const idx = projectiles.findIndex(p => p.id===msg.shotId);
           let mult = 1;
           if (idx !== -1) {
             const proj = projectiles[idx];
             mult = 1 + 2 * (proj.c ?? 0);
+            const killer = players.get(proj.owner);
             projectiles.splice(idx,1);
+            if(killer) killer.kills = (killer.kills||0)+1;
           }
           const dmg = PROJECTILE_DAMAGE * mult;
           target.health = Math.max(0, target.health - dmg);
           if (target.health <= 0) {
+            target.dead = true;
             wss.clients.forEach(c => c.readyState===1 &&
               c.send(JSON.stringify({ t:'playerDied', id: msg.target })));
-            target.health = MAX_HEALTH;
           }
         }
         break;

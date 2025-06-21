@@ -147,7 +147,7 @@ const TEXTURE_SIZE    = 256;               // resolution of procedural texture
 const PIXEL_RATIO_CAP = 0.75;              // clamp resolution for perf
 const USE_ANTIALIAS   = true;              // enable antialiasing
 const MAX_DT          = 0.05;
-const MAX_HEALTH      = 100;
+const MAX_HEALTH      = 150;
 const SPIKE_LIFE      = 0.3;               // seconds spike remains visible
 const HIT_PULL_RADIUS = 4.0;               // range for projectile attraction
 const SHIELD_DURATION = 10;
@@ -172,10 +172,12 @@ let   prevMyHealth= MAX_HEALTH;
 let   shieldTimer = 0;
 let   speedTimer  = 0;
 let   doubleShotsLeft = 0;
+let   isDead      = false;
 
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
+const leaderboardEl = document.getElementById('leaderboard');
 
 function updateHealthBar() {
   const fill = document.getElementById('health-fill');
@@ -323,7 +325,21 @@ socket.addEventListener('message', e => {
     case 'playerDied': {
       if (msg.id === myId) {
         teleport();
+        isDead = true;
       }
+    } break;
+
+    case 'roundEnd': {
+      if (leaderboardEl) {
+        const rows = msg.board.map((b,i)=>`${i+1}. <span style="color:${b.color}">${b.color}</span> - ${b.kills}`).join('<br>');
+        leaderboardEl.innerHTML = `<h3>Round Over</h3>${rows}`;
+        leaderboardEl.style.display = 'block';
+      }
+    } break;
+
+    case 'roundStart': {
+      isDead = false;
+      if (leaderboardEl) leaderboardEl.style.display = 'none';
     } break;
   }
 });
@@ -476,7 +492,7 @@ function spawnLoadedBullet(){
   character.add(loadedBullet);
 }
 function shootProjectile(){
-  if(!loadedBullet) return;
+  if(!loadedBullet || isDead) return;
   const c=currentCharge;
   const speedOut=THREE.MathUtils.lerp(MIN_SPEED_OUT,MAX_SPEED_OUT,c);
   const rangeOut=THREE.MathUtils.lerp(MIN_RANGE_OUT,MAX_RANGE_OUT,c);
@@ -521,6 +537,7 @@ function shootProjectile(){
 }
 
 function recallProjectile(){
+  if(isDead) return;
   if(loadedBullet){
     charging = false;
     currentCharge = 0;
@@ -614,6 +631,7 @@ function makeRemoteAvatar(col){
     }
     myHealth = newH;
     prevMyHealth = newH;
+    if(myHealth>0) isDead = false;
     const scale = Math.max(0, myHealth / MAX_HEALTH);
     if (bodyMesh) {
       bodyMesh.scale.y = scale;
@@ -774,9 +792,13 @@ function animate(now){
   const dt=Math.min(CLOCK.getDelta(),MAX_DT);
   if(shieldTimer>0) shieldTimer=Math.max(0,shieldTimer-dt);
   if(speedTimer>0) speedTimer=Math.max(0,speedTimer-dt);
+  if(isDead){
+    renderer.render(scene,camera);
+    return;
+  }
 
   /* send raw input */
-  if(socket.readyState===1&&myId){
+  if(socket.readyState===1&&myId&&!isDead){
     socket.send(JSON.stringify({ t:'input',
       input:{ move,spaceHeld,zHeld ,shiftHeld }}));
   }
