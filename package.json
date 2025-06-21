@@ -15,6 +15,6 @@
   "devDependencies": {
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
-    "live-server": "^1.2.0"
+    "live-server": "^1.2.2"
   }
 }
