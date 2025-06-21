@@ -16,6 +16,11 @@ const NOISE_SEED = 'sig-terrain-v1';
 // Bounds for where targets can spawn
 const TERRAIN_HALF  = 100;
 const TARGET_RADIUS = 5;
+const MAX_HEALTH    = 100;
+const PROJECTILE_DAMAGE = 25;
+const TERRAIN_ATTACK_INTERVAL = 15000;
+const TERRAIN_ATTACK_RADIUS   = 3;
+const TERRAIN_DAMAGE = 25;
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
@@ -59,7 +64,7 @@ function packSnapshot() {
     players: Object.fromEntries(
       [...players.entries()].map(([id,p]) => [
         id,
-        { ...p.state, color: p.color, score: p.score || 0 }
+        { ...p.state, color: p.color, score: p.score || 0, health: p.health }
       ])
     ),
     // array of projectile records
@@ -81,6 +86,27 @@ function spawnTarget() {
 setTimeout(spawnTarget, 2000);
 setInterval(spawnTarget, 30000);
 
+function terrainAttack(){
+  if(players.size===0) return;
+  const arr=[...players.values()];
+  const base=arr[Math.random()*arr.length|0].state;
+  const x=(base.x||0)+(Math.random()*6-3);
+  const z=(base.z||0)+(Math.random()*6-3);
+  const msg=JSON.stringify({t:'terrainAttack', x, z, r:TERRAIN_ATTACK_RADIUS});
+  wss.clients.forEach(c=>c.readyState===1&&c.send(msg));
+  for(const [id,p] of players){
+    const dx=(p.state.x||0)-x; const dz=(p.state.z||0)-z;
+    if(Math.hypot(dx,dz)<=TERRAIN_ATTACK_RADIUS){
+      p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
+      if(p.health<=0){
+        wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
+        p.health=MAX_HEALTH;
+      }
+    }
+  }
+}
+setInterval(terrainAttack, TERRAIN_ATTACK_INTERVAL);
+
 /* ─────────────── CLIENT CONNECTION ───────────────────── */
 // Handle new WebSocket connections
 wss.on('connection', ws => {
@@ -89,7 +115,7 @@ wss.on('connection', ws => {
   const color = pickNamedColour();
 
   // Initialize player state + score
-  players.set(id, { input:{}, state:{}, color, score: 0 });
+  players.set(id, { input:{}, state:{}, color, score: 0, health: MAX_HEALTH });
   scores.set(id, 0);
 
   // Send welcome packet with assigned ID, color, and noise seed
@@ -159,6 +185,21 @@ wss.on('connection', ws => {
           // Respawn the next target
           activeTarget = null;
           spawnTarget();
+        }
+        break;
+      }
+
+      case 'hitPlayer': {
+        const target = players.get(msg.target);
+        if (target) {
+          target.health = Math.max(0, target.health - PROJECTILE_DAMAGE);
+          const idx = projectiles.findIndex(p => p.id===msg.shotId);
+          if (idx !== -1) projectiles.splice(idx,1);
+          if (target.health <= 0) {
+            wss.clients.forEach(c => c.readyState===1 &&
+              c.send(JSON.stringify({ t:'playerDied', id: msg.target })));
+            target.health = MAX_HEALTH;
+          }
         }
         break;
       }

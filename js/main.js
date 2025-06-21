@@ -145,6 +145,7 @@ const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
 const NOISE_SCALE     = 0.004, NOISE_AMP = 30, NOISE_OCTS = 6;
 const TEXTURE_SIZE    = 256;               // resolution of procedural texture
 const MAX_DT          = 0.05;
+const MAX_HEALTH      = 100;
 const mapSeed         = '🌎';                 // constant → identical terrain
 const noiseSky        = new SimplexNoise(mapSeed + 'sky');
 
@@ -160,6 +161,7 @@ const tmpVec      = new THREE.Vector3();
 
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
+let   myHealth    = MAX_HEALTH;
 // ─── insert here ───
 const scores = new Map();  // id → score
 
@@ -173,6 +175,11 @@ function updateScoreboard() {
       li.textContent = (id === myId ? 'You' : id) + ': ' + pts;
       ol.appendChild(li);
     });
+}
+
+function updateHealthBar() {
+  const fill = document.getElementById('health-fill');
+  if (fill) fill.style.width = `${myHealth}%`;
 }
 let   character, bodyMesh, headMesh, Larm, Rarm, Lleg, Rleg;
 let   boxGeo, octGeo, bulletMat, loadedBullet = null;
@@ -349,6 +356,17 @@ case 'scoreUpdate': {
         if (av.position.y < gY) av.position.y = gY;
       });
     } break;
+
+    case 'terrainAttack': {
+      const { x,z,r } = msg;
+      deformTerrain(new THREE.Vector3(x,0,z), r, DEFORM_DEPTH);
+    } break;
+
+    case 'playerDied': {
+      if (msg.id === myId) {
+        teleport();
+      }
+    } break;
   }
 });
 
@@ -356,6 +374,7 @@ case 'scoreUpdate': {
 noise = new SimplexNoise(mapSeed);
 initTerrain().then(() => {
   initCharacter();
+  updateHealthBar();
   requestAnimationFrame(animate);
 });
 
@@ -520,7 +539,8 @@ function shootProjectile(){
   projectiles.push({
     mesh:loadedBullet, velocity:dir.clone().multiplyScalar(speedOut),
     travelled:0, maxRange:rangeOut, craterRad:craterR,
-    returning:false, ttl:TTL_SECONDS, id:undefined
+    returning:false, ttl:TTL_SECONDS, id:undefined,
+    owner: myId
   });
 
   if(socket.readyState===1&&myId){
@@ -602,7 +622,17 @@ function makeRemoteAvatar(col){
   }
 
   updateScoreboard();
- 
+
+  if (pack[myId] && typeof pack[myId].health === 'number') {
+    myHealth = pack[myId].health;
+    const scale = Math.max(0, myHealth / MAX_HEALTH);
+    if (bodyMesh) {
+      bodyMesh.scale.y = scale;
+      bodyMesh.visible = scale > 0;
+    }
+    updateHealthBar();
+  }
+
   /* ---------- players ---------- */
   for(const [id,st] of Object.entries(pack)){
     if(id===myId) continue;
@@ -611,6 +641,13 @@ function makeRemoteAvatar(col){
     av.position.set(st.x,st.y,st.z);
     av.rotation.y = st.yaw;
     av.userData.mat.color.set(st.color);
+
+    if (typeof st.health === 'number') {
+      av.userData.health = st.health;
+      const scale = Math.max(0, st.health / MAX_HEALTH);
+      av.userData.body.scale.y = scale;
+      av.userData.body.visible = scale > 0;
+    }
 
     const geo = st.flyMode ? av.userData.octGeo : av.userData.boxGeo;
     av.userData.body.geometry = geo;
@@ -667,7 +704,8 @@ function makeRemoteAvatar(col){
       craterRad:THREE.MathUtils.lerp(MIN_CRATER,MAX_CRATER,s.c),
       returning:false,
       ttl:TTL_SECONDS,
-      id:s.id
+      id:s.id,
+      owner:s.owner
     });
     remoteShots.set(s.id,true);
   });
@@ -755,6 +793,22 @@ function animate(now){
 
     const groundY=meshHeightAt(p.mesh.position.x,p.mesh.position.z);
     const hitGround=p.mesh.position.y<=groundY;
+
+    let hitPlayer = false;
+    if(p.owner===myId && !p.returning){
+      ghosts.forEach((av,id)=>{
+        if(hitPlayer) return;
+        const d=p.mesh.position.distanceTo(av.position);
+        if(d<1){
+          socket.send(JSON.stringify({t:'hitPlayer', target:id, shotId:p.id}));
+          hitPlayer=true;
+        }
+      });
+      if(hitPlayer){
+        catchBoomerang(p);
+        continue;
+      }
+    }
     if(hitGround){
           if (hitGround && activeTarget) {
       // see if we’re within radius of the active target
