@@ -130,6 +130,15 @@ function sendSpike(x, z, h){
   wss.clients.forEach(c => c.readyState === 1 && c.send(msg));
 }
 
+function respawnPlayer(id){
+  const p = players.get(id);
+  if(!p) return {x:0,z:0};
+  const x = (Math.random()*2-1)*TERRAIN_HALF;
+  const z = (Math.random()*2-1)*TERRAIN_HALF;
+  p.state = { ...(p.state||{}), x, y:0, z };
+  return {x,z};
+}
+
 function applySpikeDamage(spikes){
   setTimeout(() => {
     for(const [id,p] of players){
@@ -142,7 +151,8 @@ function applySpikeDamage(spikes){
           p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
           if(p.health<=0){
             p.deaths += 1;
-            wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
+            const spawn = respawnPlayer(id);
+            wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id,x:spawn.x,z:spawn.z})));
             p.health=MAX_HEALTH;
           }
           break;
@@ -301,8 +311,9 @@ wss.on('connection', ws => {
           if (target.health <= 0) {
             attacker.kills += 1;
             target.deaths += 1;
+            const spawn = respawnPlayer(msg.target);
             wss.clients.forEach(c => c.readyState===1 &&
-              c.send(JSON.stringify({ t:'playerDied', id: msg.target })));
+              c.send(JSON.stringify({ t:'playerDied', id: msg.target, x: spawn.x, z: spawn.z })));
             target.health = MAX_HEALTH;
           }
         }

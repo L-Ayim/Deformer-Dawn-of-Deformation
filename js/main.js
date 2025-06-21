@@ -354,8 +354,13 @@ socket.addEventListener('message', e => {
 
     case 'playerDied': {
       if (msg.id === myId) {
-        teleport();
+        teleport(msg.x, msg.z);
       } else {
+        const av = ghosts.get(msg.id);
+        if(av && msg.x!==undefined && msg.z!==undefined){
+          const y = meshHeightAt(msg.x,msg.z)+1;
+          av.position.set(msg.x,y,msg.z);
+        }
         const mesh = playerPathMeshes.get(msg.id);
         if (mesh) {
           scene.remove(mesh);
@@ -587,8 +592,11 @@ function recallProjectile(){
     if(p.id===undefined) p.returning = true;
   }
 }
-function teleport(){
-  const x=(Math.random()-0.5)*GRID*SPAN, z=(Math.random()-0.5)*GRID*SPAN;
+function teleport(x=null,z=null){
+  if(x===null||z===null){
+    x=(Math.random()-0.5)*GRID*SPAN;
+    z=(Math.random()-0.5)*GRID*SPAN;
+  }
   const y=meshHeightAt(x,z)+1;
   character.position.set(x,y,z);
   vertVel=0; onGround=true;
