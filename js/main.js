@@ -149,7 +149,7 @@ const USE_ANTIALIAS   = true;              // enable antialiasing
 const MAX_DT          = 0.05;
 const MAX_HEALTH      = 100;
 const SPIKE_LIFE      = 0.3;               // seconds spike remains visible
-const HIT_PULL_RADIUS = 2.0;               // range for projectile attraction
+const HIT_PULL_RADIUS = 4.0;               // range for projectile attraction
 const HIT_PULL_FACTOR = 0.15;              // how strongly velocity bends
 const mapSeed         = '🌎';                 // constant → identical terrain
 const noiseSky        = new SimplexNoise(mapSeed + 'sky');
@@ -777,6 +777,7 @@ function animate(now){
     if(p.ttl<=0||dist>MAX_LOST_DIST){
       scene.remove(p.mesh); projectiles.splice(i,1); spawnLoadedBullet(); continue;
     }
+    const prevPos = p.mesh.position.clone();
     const step=p.velocity.clone().multiplyScalar(dt);
     p.mesh.position.add(step); p.travelled+=step.length();
 
@@ -789,7 +790,7 @@ function animate(now){
     if(p.owner===myId){
       ghosts.forEach((av,id)=>{
         if(hitPlayer) return;
-        if(avatarHitTest(av,p.mesh.position)){
+        if(avatarHitTest(av, prevPos, p.mesh.position)){
           socket.send(JSON.stringify({t:'hitPlayer', target:id, shotId:p.id}));
           flashMaterial(av.userData.mat);
           spawnHitEffect(av.position.clone());
@@ -1100,17 +1101,24 @@ function flashMaterial(mat){
   mat.emissive.set(0xff0000);
 }
 
-function avatarHitTest(av,pos){
+function segmentIntersectsSphere(a,b,center,r){
+  const ab = b.clone().sub(a);
+  const t = THREE.MathUtils.clamp(center.clone().sub(a).dot(ab) / ab.lengthSq(),0,1);
+  const closest = a.clone().add(ab.multiplyScalar(t));
+  return closest.distanceTo(center) <= r;
+}
+
+function avatarHitTest(av,a,b=a){
   const parts=[
-    [av.userData.head,0.7],
-    [av.userData.body,1.0],
-    [av.userData.Larm,0.4],[av.userData.Rarm,0.4],
-    [av.userData.Lleg,0.5],[av.userData.Rleg,0.5]
+    [av.userData.head,0.9],
+    [av.userData.body,1.2],
+    [av.userData.Larm,0.6],[av.userData.Rarm,0.6],
+    [av.userData.Lleg,0.7],[av.userData.Rleg,0.7]
   ];
   const p=new THREE.Vector3();
   for(const [mesh,r] of parts){
     mesh.getWorldPosition(p);
-    if(p.distanceTo(pos)<=r) return true;
+    if(segmentIntersectsSphere(a,b,p,r)) return true;
   }
   return false;
 }
