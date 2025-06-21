@@ -7,7 +7,6 @@ window.onload = () => {
 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobile) {
   document.getElementById('joystick-zone').style.display = 'block';
-  document.getElementById('joystick-look-zone').style.display = 'block';
   document.getElementById('shoot-button').style.display = 'block';
   document.getElementById('up-button').style.display = 'block';
 
@@ -33,20 +32,41 @@ if (isMobile) {
     move.f = move.b = move.l = move.r = 0;
   });
 
-  // ─── Look Joystick ───────────────────
-  const lookJoystick = nipplejs.create({
-    zone: document.getElementById('joystick-look-zone'),
-    mode: 'static',
-    position: { right: '75px', top: '75px' },
-    color: 'white',
-    size: 80
-  });
+  // ─── Screen Drag Look ───────────────
+  let lookTouch = null, lastLX = 0, lastLY = 0;
+  const okLook = el =>
+    !el.closest('#joystick-zone') &&
+    !el.closest('#shoot-button') &&
+    !el.closest('#up-button') &&
+    !el.closest('#down-button');
 
-  lookJoystick.on('move', (evt, data) => {
-    yaw   -= data.vector.x * 0.05;
-    pitch -= data.vector.y * 0.05;
+  renderer.domElement.addEventListener('touchstart', e => {
+    const t = e.changedTouches[0];
+    if (!t || !okLook(e.target)) return;
+    lookTouch = t.identifier;
+    lastLX = t.clientX;
+    lastLY = t.clientY;
+  }, { passive: true });
+
+  renderer.domElement.addEventListener('touchmove', e => {
+    const t = Array.from(e.changedTouches).find(t => t.identifier === lookTouch);
+    if (!t) return;
+    const dx = t.clientX - lastLX;
+    const dy = t.clientY - lastLY;
+    lastLX = t.clientX;
+    lastLY = t.clientY;
+    yaw   -= dx * 0.005;
+    pitch -= dy * 0.005;
     pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, pitch));
-  });
+  }, { passive: false });
+
+  const endLook = e => {
+    if (Array.from(e.changedTouches).some(t => t.identifier === lookTouch)) {
+      lookTouch = null;
+    }
+  };
+  renderer.domElement.addEventListener('touchend', endLook, { passive: true });
+  renderer.domElement.addEventListener('touchcancel', endLook, { passive: true });
 
   // ─── Shoot Button ────────────────────
   const shootBtn = document.getElementById('shoot-button');
