@@ -21,7 +21,7 @@ with `npm start` and connect.
 
 ### Performance Options
 
-The renderer now caps pixel ratio at `0.75` and disables antialiasing by
+The renderer caps pixel ratio at `0.75` and enables antialiasing by
 default. Adjust `PIXEL_RATIO_CAP` and `USE_ANTIALIAS` in `js/main.js` if you
 want to trade visual quality for higher frame rates.
 
