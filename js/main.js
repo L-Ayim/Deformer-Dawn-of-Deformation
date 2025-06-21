@@ -77,7 +77,7 @@ window.onload = () => {
     const shootBtn = document.getElementById('shoot-button');
     shootBtn.addEventListener('touchstart', e => {
       e.preventDefault();
-      if (!loadedBullet) return;
+      if (!loadedBullet) { recallProjectile(); return; }
       charging = true;
       chargeStart = performance.now();
     });
@@ -493,7 +493,8 @@ function initCharacter(){
   /* mouse input for charge shot */
 if (!isMobile) {
   renderer.domElement.addEventListener('mousedown', e => {
-    if (e.button !== 0 || !loadedBullet) return;
+    if (e.button !== 0) return;
+    if (!loadedBullet) { recallProjectile(); return; }
     charging = true;
     chargeStart = performance.now();
   });
@@ -720,9 +721,6 @@ document.addEventListener('keydown',e=>{
       zHeld =true;
       if(flyMode&&now-lastZ<300) flyMode=false;
       lastZ=now; break;
-    case'KeyR':
-      recallProjectile();
-      break;
     case'Escape':teleport();break;
   }
 });

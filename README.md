@@ -21,4 +21,4 @@ with `npm start` and connect.
 
 ### Gameplay
 
-- Press **R** to recall your boomerang early if it's already flying.
+- Press the shoot button again to recall your boomerang early if it's already flying.
