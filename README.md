@@ -12,3 +12,10 @@ Textures now use the maximum supported anisotropy value for crisper detail at gl
 - That path now forms a directional ribbon with a color gradient so you can
   immediately tell which way to head. The ribbon tapers from thick near you to
   thin at the target, removing the need for extra arrow markers.
+
+### Baked Terrain Tiles
+
+Run `./bake_tiles.py --min -1 -1 --max 1 1 --out tiles` to generate OBJ
+files for tiles within the given coordinate range. Start the HTTP server
+with `./tile_server.js` and your client can fetch `chunk_x_z.obj` files on
+demand.
