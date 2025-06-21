@@ -1,8 +1,8 @@
 import {
-	EventDispatcher,
-	Quaternion,
-	Vector3
-} from 'three';
+        EventDispatcher,
+        Quaternion,
+        Vector3
+} from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js';
 
 const _changeEvent = { type: 'change' };
 
