@@ -28,6 +28,8 @@ const TERRAIN_SPIKE_DELAY      = 1000; // ms delay before damage applies
 const TERRAIN_DAMAGE           = 25;
 // Fewer spikes per attack for smoother gameplay
 const NUM_SPIKES_PER_ATTACK    = 2;
+// Toggle to completely disable terrain spike attacks
+const TERRAIN_ATTACKS_ENABLED  = false;
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
@@ -150,8 +152,10 @@ function targetedTerrainAttack(){
   applySpikeDamage(spikes);
 }
 
-setInterval(randomTerrainAttack, RANDOM_ATTACK_INTERVAL);
-setInterval(targetedTerrainAttack, TARGETED_ATTACK_INTERVAL);
+if (TERRAIN_ATTACKS_ENABLED) {
+  setInterval(randomTerrainAttack, RANDOM_ATTACK_INTERVAL);
+  setInterval(targetedTerrainAttack, TARGETED_ATTACK_INTERVAL);
+}
 
 /* ─────────────── CLIENT CONNECTION ───────────────────── */
 // Handle new WebSocket connections
