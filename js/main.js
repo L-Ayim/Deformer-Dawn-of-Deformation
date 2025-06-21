@@ -150,7 +150,6 @@ const MAX_DT          = 0.05;
 const MAX_HEALTH      = 100;
 const SPIKE_LIFE      = 0.3;               // seconds spike remains visible
 const HIT_PULL_RADIUS = 4.0;               // range for projectile attraction
-const HIT_PULL_FACTOR = 0.15;              // how strongly velocity bends
 const mapSeed         = '🌎';                 // constant → identical terrain
 const noiseSky        = new SimplexNoise(mapSeed + 'sky');
 
@@ -1148,8 +1147,8 @@ function applyHitPull(p, dt){
   }
 
   if(closest){
-    const desired = closest.clone().sub(pos).normalize().multiplyScalar(p.velocity.length());
-    p.velocity.lerp(desired, HIT_PULL_FACTOR);
+    const dir = closest.clone().sub(pos).normalize();
+    p.velocity.copy(dir.multiplyScalar(p.velocity.length()));
   }
 }
 
