@@ -144,6 +144,8 @@ const MIN_RANGE_OUT   = MAX_OUT_RANGE, MAX_RANGE_OUT = MAX_OUT_RANGE * 2;
 const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
 const NOISE_SCALE     = 0.004, NOISE_AMP = 30, NOISE_OCTS = 6;
 const TEXTURE_SIZE    = 256;               // resolution of procedural texture
+const PIXEL_RATIO_CAP = 0.75;              // clamp resolution for perf
+const USE_ANTIALIAS   = false;             // disable AA to ease GPU load
 const MAX_DT          = 0.05;
 const MAX_HEALTH      = 100;
 const SPIKE_LIFE      = 0.3;               // seconds spike remains visible
@@ -251,8 +253,8 @@ sun.position.set(1,2,0.5).normalize();
 scene.add(sun);
 
 const camera   = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 500);
-const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setPixelRatio(Math.min(devicePixelRatio,1));
+const renderer = new THREE.WebGLRenderer({ antialias: USE_ANTIALIAS });
+renderer.setPixelRatio(Math.min(devicePixelRatio, PIXEL_RATIO_CAP));
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
   if (isMobile) setupMobileControls();
