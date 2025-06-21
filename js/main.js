@@ -126,10 +126,6 @@ window.onload = () => {
     renderer.domElement.addEventListener('touchend', endScreenTouch, { passive: true });
     renderer.domElement.addEventListener('touchcancel', endScreenTouch, { passive: true });
 
-    // ─── Fly Toggle Button ───────────────
-    const flyBtn  = document.getElementById('fly-toggle-button');
-
-    flyBtn.addEventListener('touchend', e => { e.preventDefault(); flyMode = !flyMode; });
   }
 
 
