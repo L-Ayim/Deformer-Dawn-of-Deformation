@@ -154,6 +154,7 @@ const SHIELD_DURATION = 10;
 const SPEED_DURATION  = 10;
 const DOUBLE_SHOTS    = 10;
 const START_LIVES     = 5;
+const LABEL_VIS_DISTANCE = 40;          // max distance to show remote labels
 const mapSeed         = '🌎';                 // constant → identical terrain
 const noiseSky        = new SimplexNoise(mapSeed + 'sky');
 
@@ -166,6 +167,7 @@ const projectiles = [];                   // my bullets + remote ones
 const projectilesGroup = new THREE.Group();  // kept for legacy; harmless
 const CLOCK       = new THREE.Clock();
 const tmpVec      = new THREE.Vector3();
+const losRaycaster= new THREE.Raycaster();
 const spikes      = [];                   // active terrain spikes
 const hitEffects  = [];                   // transient hit visuals
 const damageTimers= new Map();            // material → remaining flash time
@@ -330,6 +332,14 @@ socket.addEventListener('message', e => {
     case 'playerDied': {
       if (msg.id === myId) {
         teleport();
+      } else {
+        const mesh = playerPathMeshes.get(msg.id);
+        if (mesh) {
+          scene.remove(mesh);
+          mesh.geometry.dispose();
+          mesh.material.dispose();
+          playerPathMeshes.delete(msg.id);
+        }
       }
     } break;
 
@@ -1139,7 +1149,8 @@ function updatePlayerPathMeshes() {
 
 function updateRemoteLabels() {
   const container = document.getElementById('labels');
-  if (!container) return;
+  if (!container || !terrain) return;
+  const camPos = camera.position;
   ghosts.forEach((av, id) => {
     let label = av.userData.label;
     if (!label) {
@@ -1152,7 +1163,19 @@ function updateRemoteLabels() {
       label.style.display = 'none';
       return;
     }
-    const pos = av.userData.head.getWorldPosition(new THREE.Vector3());
+    const headPos = av.userData.head.getWorldPosition(new THREE.Vector3());
+    const dist = camPos.distanceTo(headPos);
+    if (dist > LABEL_VIS_DISTANCE) {
+      label.style.display = 'none';
+      return;
+    }
+    losRaycaster.set(camPos, headPos.clone().sub(camPos).normalize());
+    const hit = losRaycaster.intersectObject(terrain, false)[0];
+    if (hit && hit.distance < dist - 0.3) {
+      label.style.display = 'none';
+      return;
+    }
+    const pos = headPos.clone();
     pos.project(camera);
     if (pos.z < -1 || pos.z > 1 ||
         pos.x < -1 || pos.x > 1 ||
