@@ -1250,16 +1250,22 @@ function updateScoreboard(snapshotPlayers){
     deaths:p.deaths||0,
     team:p.team||null
   })).sort((a,b)=>b.kills-a.kills);
-  const rows = entries.map(e =>
-    `<tr style="color:${e.color}">`+
-      `<td class="name">${e.color}</td>`+
-      `<td class="kills">${e.kills}</td>`+
-      `<td class="deaths">${e.deaths}</td>`+
-    `</tr>`
-  ).join('');
+  const rows = entries.map(e => {
+    const teammate = myTeam && e.team && e.team === myTeam;
+    const isMe = e.color === myColor.getStyle();
+    const style = `color:${e.color};` +
+                  (teammate ? 'background:rgba(255,255,255,0.2);' : '') +
+                  (isMe ? 'font-weight:bold;' : '');
+    return `<tr style="${style}">`+
+             `<td class="name">${e.color}</td>`+
+             `<td class="team">${e.team ? e.team : ''}</td>`+
+             `<td class="kills">${e.kills}</td>`+
+             `<td class="deaths">${e.deaths}</td>`+
+           `</tr>`;
+  }).join('');
   scoreboardEl.innerHTML =
     `<table>`+
-      `<tr><th>Player</th><th>K</th><th>D</th></tr>`+
+      `<tr><th>Player</th><th>Team</th><th>K</th><th>D</th></tr>`+
       rows+
     `</table>`;
 }
