@@ -18,3 +18,7 @@ Textures now use the maximum supported anisotropy value for crisper detail at gl
 The terrain is now generated on the client using Simplex noise so no tile
 server or baking step is required. Simply start the web and WebSocket servers
 with `npm start` and connect.
+
+### Gameplay
+
+- Press the shoot button again to recall your boomerang early if it's already flying.
