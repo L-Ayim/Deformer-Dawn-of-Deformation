@@ -1,11 +1,11 @@
 // js/game.js - orchestrates game modules
 import { loadHeightmap, initTerrain, terrain, meshHeightAt, HALF, GRID, SPAN, sampleHybridNormal, hmImg, deformTerrain } from './terrain.js';
 import { initCharacter, character, headMesh, bodyMesh, Larm, Rarm, Lleg, Rleg, boxGeo, octGeo, projectiles, spawnLoadedBullet, catchBoomerang, loadedBullet, setAim, teleport } from './character.js';
-import { setupNetwork, sendInput, sendState, socket, myId, activeTarget, setMyName, names, ghosts } from './network.js';
+import { setupNetwork, sendInput, sendState, socket, myId, activeTarget, setMyName, names, ghosts, waitForWelcome, serverSeed } from './network.js';
 import { setupInput, move } from './input.js';
 
 export function startGame(){
-  const mapSeed = '🌎';
+  const fallbackSeed = '🌎';
   const userName = prompt('Enter your name:', 'Player') || 'Player';
   setMyName(userName);
   const scene   = new THREE.Scene();
@@ -45,12 +45,14 @@ export function startGame(){
     scene.add(skyMesh);
   });
 
-  loadHeightmap(mapSeed, () => {
-    initTerrain(scene);
-    initCharacter(new THREE.Color(0x222222), scene, renderer, isMobile);
-    let targetMesh = null;
-    setupNetwork(scene, new THREE.SphereGeometry(0.2,8,8), {
-      spawn(target){
+  waitForWelcome.then(() => {
+    const seed = serverSeed || fallbackSeed;
+    loadHeightmap(seed, () => {
+      initTerrain(scene);
+      initCharacter(new THREE.Color(0x222222), scene, renderer, isMobile);
+      let targetMesh = null;
+      setupNetwork(scene, new THREE.SphereGeometry(0.2,8,8), {
+        spawn(target){
         if(targetMesh){
           scene.remove(targetMesh);
           targetMesh.geometry.dispose();
@@ -266,5 +268,6 @@ export function startGame(){
       }
     }
     animate();
+  });
   });
 }

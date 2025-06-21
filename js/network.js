@@ -15,6 +15,30 @@ export const names  = new Map();
 export const colors = new Map();
 export let myName = '';
 export let activeTarget = null;
+export let serverSeed = null;
+
+let welcomeResolve;
+export const waitForWelcome = new Promise(r => welcomeResolve = r);
+let gotWelcome = false;
+
+function handleWelcome(msg){
+  if(gotWelcome) return;
+  gotWelcome = true;
+  myId       = msg.id;
+  myColor    = new THREE.Color().setStyle(msg.color);
+  serverSeed = msg.seed;
+  colors.set(myId, msg.color);
+  scores.set(myId, 0);
+  names.set(myId, myName);
+  if(socket.readyState===1) socket.send(JSON.stringify({ t:'setName', name: myName }));
+  updateScoreboard();
+  if(welcomeResolve) welcomeResolve();
+}
+
+socket.addEventListener('message', e => {
+  const msg = JSON.parse(e.data);
+  if(msg.t === 'welcome') handleWelcome(msg);
+});
 
 export function sendInput(input){
   if(socket.readyState===1 && myId){
@@ -151,13 +175,7 @@ export function setupNetwork(scene, bulletGeo, targetHandlers){
         break;
       }
       case 'welcome':
-        myId    = msg.id;
-        myColor = new THREE.Color().setStyle(msg.color);
-        colors.set(myId, msg.color);
-        scores.set(myId, 0);
-        names.set(myId, myName);
-        if(socket.readyState===1) socket.send(JSON.stringify({ t:'setName', name: myName }));
-        updateScoreboard();
+        handleWelcome(msg);
         break;
       case 'nameUpdate':
         names.set(msg.id, msg.name);
