@@ -831,9 +831,12 @@ function animate(now){
   if (activeTarget) {
     const dx = activeTarget.x - character.position.x;
     const dz = activeTarget.z - character.position.z;
+    const dy = (targetMesh ? targetMesh.position.y : 0) - character.position.y;
     const ang = Math.atan2(dx, dz) - yaw;
+    const vertAng = Math.atan2(dy, Math.hypot(dx, dz));
     arrowEl.style.display = 'block';
-    arrowEl.style.transform = `translateX(-50%) rotate(${ang}rad)`;
+    arrowEl.style.transform =
+        `translateX(-50%) rotateZ(${ang}rad) rotateX(${vertAng}rad)`;
   } else {
     arrowEl.style.display = 'none';
   }
