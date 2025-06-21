@@ -144,7 +144,7 @@ const DEFORM_RADIUS   = 1,    DEFORM_DEPTH = 3;
 const SPEED_OUT       = 100,  SPEED_RETURN  = 120;
 const MAX_OUT_RANGE   = 120,  MAX_LOST_DIST = 300;
 const TTL_SECONDS     = 8,    CATCH_RADIUS  = 0.6;
-const CHARGE_TIME_MAX = 1.5,  sqMIN_SCALE = 1, MAX_SCALE = 3;
+const CHARGE_TIME_MAX = 1.5,  MIN_SCALE = 1, MAX_SCALE = 3;
 const MIN_SPEED_OUT   = SPEED_OUT,  MAX_SPEED_OUT = SPEED_OUT * 2;
 const MIN_RANGE_OUT   = MAX_OUT_RANGE, MAX_RANGE_OUT = MAX_OUT_RANGE * 2;
 const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
@@ -480,7 +480,7 @@ function shootProjectile(){
   const speedOut=THREE.MathUtils.lerp(MIN_SPEED_OUT,MAX_SPEED_OUT,c);
   const rangeOut=THREE.MathUtils.lerp(MIN_RANGE_OUT,MAX_RANGE_OUT,c);
   const craterR =THREE.MathUtils.lerp(MIN_CRATER,  MAX_CRATER,  c);
-  loadedBullet.scale.setScalar(1); currentCharge=0;
+  currentCharge=0;
 
   const start=headMesh.getWorldPosition(new THREE.Vector3());
   const dir=new THREE.Vector3(
