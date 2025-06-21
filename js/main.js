@@ -375,16 +375,9 @@ socket.addEventListener('message', e => {
       }
     } break;
 
-    case 'teamRequest': {
-      const accept = confirm(`${msg.color} wants to team up. Accept?`);
-      socket.send(JSON.stringify({t:'teamResponse', requester: msg.from, accept}));
-    } break;
     case 'teamJoin': {
       // no action needed, snapshot will update team
       alert(`Teamed up with ${msg.with}`);
-    } break;
-    case 'teamDeclined': {
-      alert(`${msg.from} declined your team request`);
     } break;
   }
 });
@@ -818,6 +811,9 @@ document.addEventListener('keydown',e=>{
       zHeld =true;
       if(flyMode&&now-lastZ<300) flyMode=false;
       lastZ=now; break;
+    case'KeyF':
+      attemptTeam();
+      break;
     case'Escape':teleport();break;
   }
 });
@@ -834,8 +830,7 @@ document.addEventListener('keyup',e=>{
   }
 });
 
-renderer.domElement.addEventListener('contextmenu', e => {
-  e.preventDefault();
+function attemptTeam(){
   if(!character) return;
   let closestId=null; let best=Infinity;
   ghosts.forEach((av,id)=>{
@@ -845,7 +840,9 @@ renderer.domElement.addEventListener('contextmenu', e => {
   if(closestId){
     socket.send(JSON.stringify({t:'teamRequest', target:closestId}));
   }
-});
+}
+
+
 
 /* ───────────────────────────── GAME LOOP ─────────────────────────── */
 let lastFrame=0;
