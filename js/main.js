@@ -852,7 +852,8 @@ function createPathStrip(from, to, startWidth = 1, endWidth = 0.5,
     const t = i / segments;
     const x = THREE.MathUtils.lerp(from.x, to.x, t);
     const z = THREE.MathUtils.lerp(from.z, to.z, t);
-    const y = meshHeightAt(x, z) + 0.05;
+    const h = meshHeightAt(x, z);
+    const y = (Number.isFinite(h) ? h : 0) + 0.05;
     const width = THREE.MathUtils.lerp(startWidth, endWidth, t);
     const offX = nx * width * 0.5;
     const offZ = nz * width * 0.5;
