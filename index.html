@@ -27,8 +27,9 @@
       Joystick (left) → Move<br>
       Drag screen → Look<br>
       Red Button → Shoot<br>
-      Tap top ↔ Jump / Ascend<br>
-      Tap bottom ↔ Descend<br>
+      Tap top or ▲ ↔ Jump / Ascend<br>
+      Tap bottom or ▼ ↔ Descend<br>
+      Fly Btn ↔ Fly / Walk<br>
       ⛶ → Fullscreen
     </span>
   </div>
@@ -42,6 +43,9 @@
   <div id="joystick-zone"></div>
   <div id="joystick-look-zone"></div>
   <div id="shoot-button"></div>
+  <div id="ascend-button" class="fly-control">▲</div>
+  <div id="descend-button" class="fly-control">▼</div>
+  <div id="fly-toggle-button" class="fly-control">Fly</div>
 
   <!-- Three.js & Noise libs are imported by js/main.js -->
 
@@ -69,6 +73,9 @@
       document.getElementById('controls-mobile').style.display    = 'inline';
       document.getElementById('joystick-zone').style.display      = 'block';
       document.getElementById('shoot-button').style.display       = 'block';
+      document.getElementById('ascend-button').style.display      = 'block';
+      document.getElementById('descend-button').style.display     = 'block';
+      document.getElementById('fly-toggle-button').style.display  = 'block';
       fullscreenBtn.style.display                                 = 'block';
 
       fullscreenBtn.addEventListener('click', () => {

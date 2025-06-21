@@ -40,7 +40,10 @@ window.onload = () => {
     let lookTouch = null, lastLX = 0, lastLY = 0;
     const okLook = el =>
       !el.closest('#joystick-zone') &&
-      !el.closest('#shoot-button');
+      !el.closest('#shoot-button') &&
+      !el.closest('#ascend-button') &&
+      !el.closest('#descend-button') &&
+      !el.closest('#fly-toggle-button');
 
     renderer.domElement.addEventListener('touchstart', e => {
       const t = e.changedTouches[0];
@@ -93,7 +96,12 @@ window.onload = () => {
     const handleScreenTouch = e => {
       if (e.touches.length > 1) return;
       const t = e.changedTouches[0];
-      if (!t || t.target.closest('#joystick-zone') || t.target.closest('#shoot-button')) return;
+      if (!t ||
+          t.target.closest('#joystick-zone') ||
+          t.target.closest('#shoot-button') ||
+          t.target.closest('#ascend-button') ||
+          t.target.closest('#descend-button') ||
+          t.target.closest('#fly-toggle-button')) return;
       const top = t.clientY < innerHeight / 2;
       const now = performance.now();
       if (top) {
@@ -121,6 +129,19 @@ window.onload = () => {
     renderer.domElement.addEventListener('touchstart', handleScreenTouch, { passive: true });
     renderer.domElement.addEventListener('touchend', endScreenTouch, { passive: true });
     renderer.domElement.addEventListener('touchcancel', endScreenTouch, { passive: true });
+
+    // ─── Dedicated Flight Buttons ────────
+    const ascBtn  = document.getElementById('ascend-button');
+    const descBtn = document.getElementById('descend-button');
+    const flyBtn  = document.getElementById('fly-toggle-button');
+
+    ascBtn.addEventListener('touchstart', e => { e.preventDefault(); spaceHeld = true; });
+    ascBtn.addEventListener('touchend',   e => { e.preventDefault(); spaceHeld = false; });
+
+    descBtn.addEventListener('touchstart', e => { e.preventDefault(); zHeld = true; });
+    descBtn.addEventListener('touchend',   e => { e.preventDefault(); zHeld = false; });
+
+    flyBtn.addEventListener('touchend', e => { e.preventDefault(); flyMode = !flyMode; });
   }
 
 

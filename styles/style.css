@@ -112,3 +112,24 @@ canvas {
   transition: opacity 0.8s ease;
 }
 
+/* Mobile flight controls */
+.fly-control {
+  display: none;
+  position: absolute;
+  right: 20px;
+  width: 55px;
+  height: 55px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-family: monospace;
+  font-size: 20px;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  text-align: center;
+  line-height: 55px;
+  z-index: 11;
+}
+#ascend-button { bottom: 100px; }
+#descend-button { bottom: 165px; }
+#fly-toggle-button { bottom: 230px; }
+
