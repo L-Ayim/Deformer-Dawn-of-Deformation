@@ -3,14 +3,12 @@
 import * as THREE from '../vendor/three.module.js';
 import SimplexNoise from 'https://cdn.jsdelivr.net/npm/simplex-noise@3.0.0/dist/esm/simplex-noise.js';
 
-window.onload = () => {
+const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+window.onload = () => {
   function setupMobileControls() {
     document.getElementById('joystick-zone').style.display = 'block';
     document.getElementById('shoot-button').style.display = 'block';
-    document.getElementById('up-button').style.display = 'block';
-    document.getElementById('sprint-button').style.display = 'block';
 
     // ─── Movement Joystick ───────────────
     const joystick = nipplejs.create({
@@ -18,34 +16,31 @@ window.onload = () => {
       mode: 'static',
       position: { left: '75px', bottom: '75px' },
       color: 'white',
-      size: 100
+      size: 200
     });
 
     joystick.on('move', (evt, data) => {
       const x = data.vector.x;
       const y = data.vector.y;
-      move.f = y >  0.3 ? 1 : 0;
-      move.b = y < -0.3 ? 1 : 0;
-      move.l = x < -0.3 ? 1 : 0;
-      move.r = x >  0.3 ? 1 : 0;
-      autoSprint = (y > 0.85 && Math.abs(x) < 0.3);
-      shiftHeld = manualSprint || autoSprint;
+      move.f = Math.max(0, y);
+      move.b = Math.max(0, -y);
+      move.l = Math.max(0, -x);
+      move.r = Math.max(0, x);
+      joystickIntensity = Math.min(1, data.distance / (joystick.options.size / 2));
+      shiftHeld = manualSprint || joystickIntensity > 0.9;
     });
 
     joystick.on('end', () => {
       move.f = move.b = move.l = move.r = 0;
-      autoSprint = false;
-      shiftHeld = manualSprint || autoSprint;
+      joystickIntensity = 0;
+      shiftHeld = manualSprint || joystickIntensity > 0.9;
     });
 
     // ─── Screen Drag Look ───────────────
     let lookTouch = null, lastLX = 0, lastLY = 0;
     const okLook = el =>
       !el.closest('#joystick-zone') &&
-      !el.closest('#shoot-button') &&
-      !el.closest('#up-button') &&
-      !el.closest('#down-button') &&
-      !el.closest('#sprint-button');
+      !el.closest('#shoot-button');
 
     renderer.domElement.addEventListener('touchstart', e => {
       const t = e.changedTouches[0];
@@ -91,59 +86,41 @@ window.onload = () => {
       shootProjectile();
     });
 
-    // ─── Jump/Fly Controls ───────────────
-    const upBtn   = document.getElementById('up-button');
-    const downBtn = document.getElementById('down-button');
+    // ─── Screen Tap Flight Controls ──────
+    let lastTopTap = 0;
+    let lastBottomTap = 0;
 
-    let lastUpTap = 0;
-    let lastDownTap = 0;
-
-    const onUpStart = () => {
+    const handleScreenTouch = e => {
+      if (e.touches.length > 1) return;
+      const t = e.changedTouches[0];
+      if (!t || t.target.closest('#joystick-zone') || t.target.closest('#shoot-button')) return;
+      const top = t.clientY < innerHeight / 2;
       const now = performance.now();
-      if (now - lastUpTap < 300) {
-        flyMode = true;
-        downBtn.style.display = 'block';
-      } else if (!flyMode && onGround) {
-        vertVel = 12;
-        onGround = false;
+      if (top) {
+        if (now - lastTopTap < 300) {
+          flyMode = true;
+        } else if (!flyMode && onGround) {
+          vertVel = 12;
+          onGround = false;
+        } else if (flyMode) {
+          spaceHeld = true;
+        }
+        lastTopTap = now;
+      } else {
+        if (now - lastBottomTap < 300) {
+          flyMode = false;
+        } else if (flyMode) {
+          zHeld = true;
+        }
+        lastBottomTap = now;
       }
-      lastUpTap = now;
-      spaceHeld = true;
     };
 
-    const onUpEnd = () => { spaceHeld = false; };
+    const endScreenTouch = () => { spaceHeld = false; zHeld = false; };
 
-    upBtn.addEventListener('touchstart', e => { e.preventDefault(); onUpStart(); });
-    upBtn.addEventListener('touchend',   e => { e.preventDefault(); onUpEnd(); });
-
-    const onDownStart = () => {
-      const now = performance.now();
-      if (now - lastDownTap < 300) {
-        flyMode = false;
-        downBtn.style.display = 'none';
-      }
-      zHeld  = true;
-      lastDownTap = now;
-    };
-
-    const onDownEnd = () => { zHeld  = false; };
-
-    downBtn.addEventListener('touchstart', e => { e.preventDefault(); onDownStart(); });
-    downBtn.addEventListener('touchend',   e => { e.preventDefault(); onDownEnd(); });
-
-    // ─── Sprint Button ───────────────────
-    const sprintBtn = document.getElementById('sprint-button');
-    const onSprintStart = () => {
-      manualSprint = true;
-      shiftHeld = manualSprint || autoSprint;
-    };
-    const onSprintEnd   = () => {
-      manualSprint = false;
-      shiftHeld = manualSprint || autoSprint;
-    };
-    sprintBtn.addEventListener('touchstart', e => { e.preventDefault(); onSprintStart(); });
-    sprintBtn.addEventListener('touchend',   e => { e.preventDefault(); onSprintEnd(); });
-    sprintBtn.addEventListener('touchcancel', onSprintEnd);
+    renderer.domElement.addEventListener('touchstart', handleScreenTouch, { passive: true });
+    renderer.domElement.addEventListener('touchend', endScreenTouch, { passive: true });
+    renderer.domElement.addEventListener('touchcancel', endScreenTouch, { passive: true });
   }
 
 
@@ -199,7 +176,7 @@ let   yaw = 0, pitch = 0;
 let   charging = false, chargeStart = 0, currentCharge = 0;
 let   vertVel = 0, onGround = false, flyMode = false;
 let   spaceHeld = false, zHeld  = false;
-let   manualSprint = false, autoSprint = false, shiftHeld = false;
+let   manualSprint = false, shiftHeld = false, joystickIntensity = 0;
 let   lastSpace = 0, lastZ = 0;
 const move = { f:0, b:0, l:0, r:0 };
 
@@ -685,7 +662,7 @@ document.addEventListener('keydown',e=>{
     case'KeyA':move.l=1;break; case'KeyD':move.r=1;break;
     case'ShiftLeft':case'ShiftRight':
       manualSprint = true;
-      shiftHeld = manualSprint || autoSprint;
+      shiftHeld = manualSprint || joystickIntensity > 0.9;
       break;
     case'Space':
       spaceHeld=true;
@@ -705,7 +682,7 @@ document.addEventListener('keyup',e=>{
     case'KeyA':move.l=0;break; case'KeyD':move.r=0;break;
     case'ShiftLeft':case'ShiftRight':
       manualSprint = false;
-      shiftHeld = manualSprint || autoSprint;
+      shiftHeld = manualSprint || joystickIntensity > 0.9;
       break;
     case'Space':spaceHeld=false;break;
     case'KeyZ':case'KeyZ':zHeld =false;break;
@@ -801,8 +778,9 @@ function animate(now){
   const dir=new THREE.Vector3(move.r-move.l,0,move.b-move.f);
   if(dir.lengthSq()){
     dir.normalize().applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
-    const baseSpeed=flyMode?20:10;
-    character.position.addScaledVector(dir, baseSpeed*(shiftHeld?2:1)*dt);
+    const baseSpeed = flyMode ? 20 : 10;
+    const speedMult = isMobile ? 1 + joystickIntensity : (shiftHeld ? 2 : 1);
+    character.position.addScaledVector(dir, baseSpeed * speedMult * dt);
   }
 
   /* vertical */

@@ -27,8 +27,8 @@
       Joystick (left) → Move<br>
       Drag screen → Look<br>
       Red Button → Shoot<br>
-      ↑↓ → Jump / Fly<br>
-      Hold ⏩ → Run<br>
+      Tap top ↔ Jump / Ascend<br>
+      Tap bottom ↔ Descend<br>
       ⛶ → Fullscreen
     </span>
   </div>
@@ -42,9 +42,6 @@
   <div id="joystick-zone"></div>
   <div id="joystick-look-zone"></div>
   <div id="shoot-button"></div>
-  <div id="up-button"></div>
-  <div id="down-button"></div>
-  <div id="sprint-button"></div>
 
   <!-- Three.js & Noise libs are imported by js/main.js -->
 
@@ -53,11 +50,7 @@
     const isMobile      = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const infoPanel     = document.getElementById('info');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const upBtn         = document.getElementById('up-button');
-    const downBtn       = document.getElementById('down-button');
-    const sprintBtn     = document.getElementById('sprint-button');
-
-    let lastTapUp = 0, lastTapDown = 0, idleTimeout;
+    let idleTimeout;
 
     function resetIdleTimer() {
       infoPanel.classList.remove('visible');
@@ -77,8 +70,6 @@
       document.getElementById('joystick-zone').style.display      = 'block';
       document.getElementById('shoot-button').style.display       = 'block';
       fullscreenBtn.style.display                                 = 'block';
-      upBtn.style.display                                          = 'block';
-      sprintBtn.style.display                                      = 'block';
 
       fullscreenBtn.addEventListener('click', () => {
         const el = document.documentElement;
@@ -92,30 +83,6 @@
       document.addEventListener('touchstart', resetIdleTimer, { passive: true });
       document.addEventListener('mousemove', resetIdleTimer, { passive: true });
       resetIdleTimer();
-
-      upBtn.addEventListener('touchstart', () => {
-        const now = performance.now();
-        if (now - lastTapUp < 300) {
-          // enter fly mode
-          downBtn.style.display = 'block';
-        } else {
-          // single-tap jump
-        }
-        lastTapUp = now;
-      });
-      upBtn.addEventListener('touchend', () => { /* end jump/ascend */ });
-
-      downBtn.addEventListener('touchstart', () => {
-        const now = performance.now();
-        if (now - lastTapDown < 300) {
-          // exit fly mode
-          downBtn.style.display = 'none';
-        } else {
-          // single-tap descend
-        }
-        lastTapDown = now;
-      });
-      downBtn.addEventListener('touchend', () => { /* end descend */ });
     });
   </script>
 
