@@ -12,6 +12,7 @@ export let myId = null;
 export let myColor = new THREE.Color(0x222222);
 export const scores = new Map();
 export const names  = new Map();
+export const colors = new Map();
 export let myName = '';
 export let activeTarget = null;
 
@@ -52,6 +53,8 @@ export function updateScoreboard() {
       const li = document.createElement('li');
       const name = id === myId ? (myName || 'You') : (names.get(id) || id);
       li.textContent = name + ': ' + pts;
+      const col = colors.get(id);
+      if(col) li.style.color = col;
       ol.appendChild(li);
     });
 }
@@ -60,6 +63,7 @@ export function applySnapshot({ players:pack, projectiles:shots }, scene, bullet
   Object.keys(pack).forEach(id => {
     if (!scores.has(id)) scores.set(id, 0);
     if (pack[id].name) names.set(id, pack[id].name);
+    if (pack[id].color) colors.set(id, pack[id].color);
   });
   updateScoreboard();
 
@@ -67,6 +71,7 @@ export function applySnapshot({ players:pack, projectiles:shots }, scene, bullet
     if(id===myId) continue;
     const av=ghosts.get(id) ?? makeRemoteAvatar(st.color);
     ghosts.set(id,av);
+    colors.set(id, st.color);
     av.position.set(st.x,st.y,st.z);
     av.rotation.y = st.yaw;
     av.userData.mat.color.set(st.color);
@@ -148,6 +153,7 @@ export function setupNetwork(scene, bulletGeo, targetHandlers){
       case 'welcome':
         myId    = msg.id;
         myColor = new THREE.Color().setStyle(msg.color);
+        colors.set(myId, msg.color);
         scores.set(myId, 0);
         names.set(myId, myName);
         if(socket.readyState===1) socket.send(JSON.stringify({ t:'setName', name: myName }));
