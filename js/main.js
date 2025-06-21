@@ -1,5 +1,8 @@
 // js/main.js
-// (Three & SimplexNoise must be exposed as globals in <script type="module">)
+// Import required libraries directly so we don't rely on globals
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js';
+import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/OBJLoader.js';
+import SimplexNoise from 'https://cdn.jsdelivr.net/npm/simplex-noise@3.0.0/dist/esm/simplex-noise.js';
 
 window.onload = () => {
 
