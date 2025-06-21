@@ -3,127 +3,126 @@
 
 window.onload = () => {
 
-/* ──────────────────────────── MOBILE ───────────────────────────── */
-const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-if (isMobile) {
-  document.getElementById('joystick-zone').style.display = 'block';
-  document.getElementById('shoot-button').style.display = 'block';
-  document.getElementById('up-button').style.display = 'block';
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  function setupMobileControls() {
+    document.getElementById('joystick-zone').style.display = 'block';
+    document.getElementById('shoot-button').style.display = 'block';
+    document.getElementById('up-button').style.display = 'block';
 
-  // ─── Movement Joystick ───────────────
-  const joystick = nipplejs.create({
-    zone: document.getElementById('joystick-zone'),
-    mode: 'static',
-    position: { left: '75px', bottom: '75px' },
-    color: 'white',
-    size: 100
-  });
+    // ─── Movement Joystick ───────────────
+    const joystick = nipplejs.create({
+      zone: document.getElementById('joystick-zone'),
+      mode: 'static',
+      position: { left: '75px', bottom: '75px' },
+      color: 'white',
+      size: 100
+    });
 
-  joystick.on('move', (evt, data) => {
-    const x = data.vector.x;
-    const y = data.vector.y;
-    move.f = y >  0.3 ? 1 : 0;
-    move.b = y < -0.3 ? 1 : 0;
-    move.l = x < -0.3 ? 1 : 0;
-    move.r = x >  0.3 ? 1 : 0;
-  });
+    joystick.on('move', (evt, data) => {
+      const x = data.vector.x;
+      const y = data.vector.y;
+      move.f = y >  0.3 ? 1 : 0;
+      move.b = y < -0.3 ? 1 : 0;
+      move.l = x < -0.3 ? 1 : 0;
+      move.r = x >  0.3 ? 1 : 0;
+    });
 
-  joystick.on('end', () => {
-    move.f = move.b = move.l = move.r = 0;
-  });
+    joystick.on('end', () => {
+      move.f = move.b = move.l = move.r = 0;
+    });
 
-  // ─── Screen Drag Look ───────────────
-  let lookTouch = null, lastLX = 0, lastLY = 0;
-  const okLook = el =>
-    !el.closest('#joystick-zone') &&
-    !el.closest('#shoot-button') &&
-    !el.closest('#up-button') &&
-    !el.closest('#down-button');
+    // ─── Screen Drag Look ───────────────
+    let lookTouch = null, lastLX = 0, lastLY = 0;
+    const okLook = el =>
+      !el.closest('#joystick-zone') &&
+      !el.closest('#shoot-button') &&
+      !el.closest('#up-button') &&
+      !el.closest('#down-button');
 
-  renderer.domElement.addEventListener('touchstart', e => {
-    const t = e.changedTouches[0];
-    if (!t || !okLook(e.target)) return;
-    lookTouch = t.identifier;
-    lastLX = t.clientX;
-    lastLY = t.clientY;
-  }, { passive: true });
+    renderer.domElement.addEventListener('touchstart', e => {
+      const t = e.changedTouches[0];
+      if (!t || !okLook(e.target)) return;
+      lookTouch = t.identifier;
+      lastLX = t.clientX;
+      lastLY = t.clientY;
+    }, { passive: true });
 
-  renderer.domElement.addEventListener('touchmove', e => {
-    const t = Array.from(e.changedTouches).find(t => t.identifier === lookTouch);
-    if (!t) return;
-    const dx = t.clientX - lastLX;
-    const dy = t.clientY - lastLY;
-    lastLX = t.clientX;
-    lastLY = t.clientY;
-    yaw   -= dx * 0.005;
-    pitch -= dy * 0.005;
-    pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, pitch));
-  }, { passive: false });
+    renderer.domElement.addEventListener('touchmove', e => {
+      const t = Array.from(e.changedTouches).find(t => t.identifier === lookTouch);
+      if (!t) return;
+      const dx = t.clientX - lastLX;
+      const dy = t.clientY - lastLY;
+      lastLX = t.clientX;
+      lastLY = t.clientY;
+      yaw   -= dx * 0.005;
+      pitch -= dy * 0.005;
+      pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, pitch));
+    }, { passive: false });
 
-  const endLook = e => {
-    if (Array.from(e.changedTouches).some(t => t.identifier === lookTouch)) {
-      lookTouch = null;
-    }
-  };
-  renderer.domElement.addEventListener('touchend', endLook, { passive: true });
-  renderer.domElement.addEventListener('touchcancel', endLook, { passive: true });
+    const endLook = e => {
+      if (Array.from(e.changedTouches).some(t => t.identifier === lookTouch)) {
+        lookTouch = null;
+      }
+    };
+    renderer.domElement.addEventListener('touchend', endLook, { passive: true });
+    renderer.domElement.addEventListener('touchcancel', endLook, { passive: true });
 
-  // ─── Shoot Button ────────────────────
-  const shootBtn = document.getElementById('shoot-button');
-  shootBtn.addEventListener('touchstart', e => {
-    e.preventDefault();
-    if (!loadedBullet) return;
-    charging = true;
-    chargeStart = performance.now();
-  });
-  shootBtn.addEventListener('touchend', e => {
-    e.preventDefault();
-    if (!charging) return;
-    charging = false;
-    currentCharge = Math.min(1, (performance.now() - chargeStart) / 1000 / CHARGE_TIME_MAX);
-    shootProjectile();
-  });
+    // ─── Shoot Button ────────────────────
+    const shootBtn = document.getElementById('shoot-button');
+    shootBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (!loadedBullet) return;
+      charging = true;
+      chargeStart = performance.now();
+    });
+    shootBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      if (!charging) return;
+      charging = false;
+      currentCharge = Math.min(1, (performance.now() - chargeStart) / 1000 / CHARGE_TIME_MAX);
+      shootProjectile();
+    });
 
-  // ─── Jump/Fly Controls ───────────────
-  const upBtn   = document.getElementById('up-button');
-  const downBtn = document.getElementById('down-button');
+    // ─── Jump/Fly Controls ───────────────
+    const upBtn   = document.getElementById('up-button');
+    const downBtn = document.getElementById('down-button');
 
-  let lastUpTap = 0;
-  let lastDownTap = 0;
+    let lastUpTap = 0;
+    let lastDownTap = 0;
 
-  const onUpStart = () => {
-    const now = performance.now();
-    if (now - lastUpTap < 300) {
-      flyMode = true;
-      downBtn.style.display = 'block';
-    } else if (!flyMode && onGround) {
-      vertVel = 12;
-      onGround = false;
-    }
-    lastUpTap = now;
-    spaceHeld = true;
-  };
+    const onUpStart = () => {
+      const now = performance.now();
+      if (now - lastUpTap < 300) {
+        flyMode = true;
+        downBtn.style.display = 'block';
+      } else if (!flyMode && onGround) {
+        vertVel = 12;
+        onGround = false;
+      }
+      lastUpTap = now;
+      spaceHeld = true;
+    };
 
-  const onUpEnd = () => { spaceHeld = false; };
+    const onUpEnd = () => { spaceHeld = false; };
 
-  upBtn.addEventListener('touchstart', e => { e.preventDefault(); onUpStart(); });
-  upBtn.addEventListener('touchend',   e => { e.preventDefault(); onUpEnd(); });
+    upBtn.addEventListener('touchstart', e => { e.preventDefault(); onUpStart(); });
+    upBtn.addEventListener('touchend',   e => { e.preventDefault(); onUpEnd(); });
 
-  const onDownStart = () => {
-    const now = performance.now();
-    if (now - lastDownTap < 300) {
-      flyMode = false;
-      downBtn.style.display = 'none';
-    }
-    zHeld  = true;
-    lastDownTap = now;
-  };
+    const onDownStart = () => {
+      const now = performance.now();
+      if (now - lastDownTap < 300) {
+        flyMode = false;
+        downBtn.style.display = 'none';
+      }
+      zHeld  = true;
+      lastDownTap = now;
+    };
 
-  const onDownEnd = () => { zHeld  = false; };
+    const onDownEnd = () => { zHeld  = false; };
 
-  downBtn.addEventListener('touchstart', e => { e.preventDefault(); onDownStart(); });
-  downBtn.addEventListener('touchend',   e => { e.preventDefault(); onDownEnd(); });
-}
+    downBtn.addEventListener('touchstart', e => { e.preventDefault(); onDownStart(); });
+    downBtn.addEventListener('touchend',   e => { e.preventDefault(); onDownEnd(); });
+  }
 
 
 
@@ -213,6 +212,7 @@ const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setPixelRatio(Math.min(devicePixelRatio,1));
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
+  if (isMobile) setupMobileControls();
 
 /* minimap canvas */
 const miniCanvas = document.getElementById('minimap');
