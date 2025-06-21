@@ -20,6 +20,7 @@ const MAX_HEALTH    = 100;
 const PROJECTILE_DAMAGE = 25;
 const TERRAIN_ATTACK_INTERVAL = 5000;
 const TERRAIN_ATTACK_RADIUS   = 3;
+const TERRAIN_SPIKE_DELAY     = 1000; // ms delay before damage applies
 const TERRAIN_DAMAGE = 25;
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
@@ -90,18 +91,22 @@ function terrainAttack(){
   const base=arr[Math.random()*arr.length|0].state;
   const x=(base.x||0)+(Math.random()*6-3);
   const z=(base.z||0)+(Math.random()*6-3);
-  const msg=JSON.stringify({t:'terrainAttack', x, z, r:TERRAIN_ATTACK_RADIUS});
+  const msg=JSON.stringify({
+    t:'terrainSpike', x, z, r:TERRAIN_ATTACK_RADIUS, delay:TERRAIN_SPIKE_DELAY
+  });
   wss.clients.forEach(c=>c.readyState===1&&c.send(msg));
-  for(const [id,p] of players){
-    const dx=(p.state.x||0)-x; const dz=(p.state.z||0)-z;
-    if(Math.hypot(dx,dz)<=TERRAIN_ATTACK_RADIUS){
-      p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
-      if(p.health<=0){
-        wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
-        p.health=MAX_HEALTH;
+  setTimeout(()=>{
+    for(const [id,p] of players){
+      const dx=(p.state.x||0)-x; const dz=(p.state.z||0)-z;
+      if(Math.hypot(dx,dz)<=TERRAIN_ATTACK_RADIUS){
+        p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
+        if(p.health<=0){
+          wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
+          p.health=MAX_HEALTH;
+        }
       }
     }
-  }
+  },TERRAIN_SPIKE_DELAY);
 }
 function scheduleTerrainAttack(){
   terrainAttack();

@@ -158,6 +158,10 @@ const projectiles = [];                   // my bullets + remote ones
 const projectilesGroup = new THREE.Group();  // kept for legacy; harmless
 const CLOCK       = new THREE.Clock();
 const tmpVec      = new THREE.Vector3();
+const spikes      = [];                   // active terrain spikes
+const hitEffects  = [];                   // transient hit visuals
+const damageTimers= new Map();            // material → remaining flash time
+let   prevMyHealth= MAX_HEALTH;
 
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
@@ -328,9 +332,9 @@ socket.addEventListener('message', e => {
       });
     } break;
 
-    case 'terrainAttack': {
-      const { x,z,r } = msg;
-      deformTerrain(new THREE.Vector3(x,0,z), r, DEFORM_DEPTH);
+    case 'terrainSpike': {
+      const { x,z,r,delay } = msg;
+      spawnTerrainSpike(x, z, r, (delay||1000)/1000);
     } break;
 
     case 'playerDied': {
@@ -585,7 +589,13 @@ function makeRemoteAvatar(col){
 /* ────────────────────────── SNAPSHOT HANDLER ─────────────────────── */
   function applySnapshot({ players:pack, projectiles:shots }){
   if (pack[myId] && typeof pack[myId].health === 'number') {
-    myHealth = pack[myId].health;
+    const newH = pack[myId].health;
+    if(newH < prevMyHealth && bodyMesh){
+      flashMaterial(bodyMesh.material);
+      spawnHitEffect(character.position.clone());
+    }
+    myHealth = newH;
+    prevMyHealth = newH;
     const scale = Math.max(0, myHealth / MAX_HEALTH);
     if (bodyMesh) {
       bodyMesh.scale.y = scale;
@@ -604,6 +614,11 @@ function makeRemoteAvatar(col){
     av.userData.mat.color.set(st.color);
 
     if (typeof st.health === 'number') {
+      if(av.userData.lastHealth!==undefined && st.health < av.userData.lastHealth){
+        flashMaterial(av.userData.mat);
+        spawnHitEffect(av.position.clone());
+      }
+      av.userData.lastHealth = st.health;
       av.userData.health = st.health;
       const scale = Math.max(0, st.health / MAX_HEALTH);
       av.userData.body.scale.y = scale;
@@ -767,6 +782,8 @@ function animate(now){
         const d=p.mesh.position.distanceTo(av.position);
         if(d<1){
           socket.send(JSON.stringify({t:'hitPlayer', target:id, shotId:p.id}));
+          flashMaterial(av.userData.mat);
+          spawnHitEffect(av.position.clone());
           hitPlayer=true;
         }
       });
@@ -815,6 +832,45 @@ function animate(now){
       p.velocity.copy(toHead.normalize().multiplyScalar(SPEED_RETURN));
     }
   }
+
+  /* update terrain spikes */
+  for(let i=spikes.length-1;i>=0;i--){
+    const s=spikes[i];
+    s.age+=dt;
+    const t=Math.min(1,s.age/s.delay);
+    s.mesh.scale.y=THREE.MathUtils.lerp(0.01,1,t);
+    if(s.age>s.delay+0.5){
+      scene.remove(s.mesh); s.mesh.geometry.dispose(); s.mesh.material.dispose();
+      spikes.splice(i,1);
+    }
+  }
+
+  /* update hit effects */
+  for(let i=hitEffects.length-1;i>=0;i--){
+    const e=hitEffects[i];
+    e.time-=dt;
+    if(e.time<=0){
+      scene.remove(e.mesh); e.mesh.geometry.dispose(); e.mesh.material.dispose();
+      hitEffects.splice(i,1);
+    }else{
+      e.mesh.material.opacity=e.time/0.3;
+      e.mesh.scale.setScalar(1+(0.3-e.time));
+    }
+  }
+
+  /* update damage flashes */
+  damageTimers.forEach((time,mat)=>{
+    time-=dt;
+    if(time<=0){
+      mat.emissive.copy(mat.userData.baseEmissive);
+      damageTimers.delete(mat);
+    }else{
+      const base=mat.userData.baseEmissive;
+      const c=base.clone().lerp(new THREE.Color(0xff0000),time/0.2);
+      mat.emissive.copy(c);
+      damageTimers.set(mat,time);
+    }
+  });
 
   /* geometry swap */
   if(flyMode){
@@ -989,6 +1045,34 @@ function updatePathMesh() {
   scene.add(pathMesh);
 
   // path thickness tapers toward the destination – no arrows needed
+}
+
+function spawnTerrainSpike(x,z,r,delay){
+  const h = meshHeightAt(x,z);
+  const geo = new THREE.ConeGeometry(r*0.5,r*2,8);
+  const mat = new THREE.MeshStandardMaterial({ color:0x8844ff });
+  const mesh = new THREE.Mesh(geo,mat);
+  mesh.position.set(x,h,z);
+  mesh.scale.y = 0.01;
+  scene.add(mesh);
+  spikes.push({ mesh, age:0, delay });
+}
+
+function spawnHitEffect(pos){
+  const g = new THREE.SphereGeometry(0.3,8,8);
+  const m = new THREE.MeshBasicMaterial({ color:0xff0000, transparent:true });
+  const mesh = new THREE.Mesh(g,m);
+  mesh.position.copy(pos);
+  scene.add(mesh);
+  hitEffects.push({ mesh, time:0.3 });
+}
+
+function flashMaterial(mat){
+  if(!mat.userData.baseEmissive){
+    mat.userData.baseEmissive = mat.emissive.clone();
+  }
+  damageTimers.set(mat,0.2);
+  mat.emissive.set(0xff0000);
 }
 
 /* ─────────────────────────── HELPERS ─────────────────────────────── */
