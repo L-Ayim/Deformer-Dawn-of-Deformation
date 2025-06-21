@@ -161,6 +161,7 @@ const tmpVec      = new THREE.Vector3();
 const spikes      = [];                   // active terrain spikes
 const hitEffects  = [];                   // transient hit visuals
 const damageTimers= new Map();            // material → remaining flash time
+const labelContainer = document.getElementById('labels');
 let   prevMyHealth= MAX_HEALTH;
 
 let   myId        = null;
@@ -333,8 +334,8 @@ socket.addEventListener('message', e => {
     } break;
 
     case 'terrainSpike': {
-      const { x,z,r,delay } = msg;
-      spawnTerrainSpike(x, z, r, (delay||1000)/1000);
+      const { x,z,r,delay,h } = msg;
+      spawnTerrainSpike(x, z, r, (delay||1000)/1000, h);
     } break;
 
     case 'playerDied': {
@@ -578,9 +579,13 @@ function makeRemoteAvatar(col){
   hb.scale.set(1,0.1,1);
   hb.position.set(0,3.6,0);
   root.add(hb);
+  const label = document.createElement('div');
+  label.className = 'player-label';
+  label.textContent = MAX_HEALTH;
+  labelContainer.appendChild(label);
   root.userData={ body,head,Larm,Rarm,Lleg,Rleg, mat,
     boxGeo, octGeo:new THREE.OctahedronGeometry(1,0).rotateX(Math.PI/2),
-    healthBar:hb };
+    healthBar:hb, label };
   scene.add(root);
   ensureRemoteHasLoadedBullet(root,col);
   return root;
@@ -654,8 +659,20 @@ function makeRemoteAvatar(col){
     av.visible=true;
   }
   ghosts.forEach((av,id)=>{
-    if(!(id in pack)) av.visible=false;
-    av.userData.healthBar.lookAt(camera.position);
+    if(!(id in pack)){
+      av.visible=false;
+      av.userData.label.style.display = 'none';
+    } else {
+      av.userData.healthBar.lookAt(camera.position);
+      const pos = av.position.clone();
+      pos.y += 4;
+      pos.project(camera);
+      const sx = (pos.x * 0.5 + 0.5) * innerWidth;
+      const sy = (-pos.y * 0.5 + 0.5) * innerHeight;
+      av.userData.label.style.transform = `translate(-50%,-50%) translate(${sx}px,${sy}px)`;
+      av.userData.label.textContent = Math.round(av.userData.health ?? MAX_HEALTH);
+      av.userData.label.style.display = 'block';
+    }
   });
 
   /* ---------- remote bullets ---------- */
@@ -1047,10 +1064,10 @@ function updatePathMesh() {
   // path thickness tapers toward the destination – no arrows needed
 }
 
-function spawnTerrainSpike(x,z,r,delay){
+function spawnTerrainSpike(x,z,r,delay,height=1){
   const h = meshHeightAt(x,z);
-  const geo = new THREE.ConeGeometry(r*0.5,r*2,8);
-  const mat = new THREE.MeshStandardMaterial({ color:0x8844ff });
+  const geo = new THREE.ConeGeometry(r*0.5,r*2*height,8);
+  const mat = new THREE.MeshStandardMaterial({ color: terrain.material.color });
   const mesh = new THREE.Mesh(geo,mat);
   mesh.position.set(x,h,z);
   mesh.scale.y = 0.01;
