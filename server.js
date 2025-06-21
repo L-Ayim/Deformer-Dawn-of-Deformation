@@ -19,12 +19,15 @@ const TARGET_RADIUS = 5;
 const MAX_HEALTH    = 100;
 const PROJECTILE_DAMAGE = 25;
 // Base delay between terrain attacks (ms). Increased to lighten load
-const TERRAIN_ATTACK_INTERVAL = 10000;
-const TERRAIN_ATTACK_RADIUS   = 3;
-const TERRAIN_SPIKE_DELAY     = 1000; // ms delay before damage applies
-const TERRAIN_DAMAGE = 25;
+// Random spikes occur roughly five times per minute while
+// player-targeted spikes happen about once per minute.
+const RANDOM_ATTACK_INTERVAL   = 60000 / 5;  // 5 per minute
+const TARGETED_ATTACK_INTERVAL = 120000 / 2; // 2 per two minutes
+const TERRAIN_ATTACK_RADIUS    = 3;
+const TERRAIN_SPIKE_DELAY      = 1000; // ms delay before damage applies
+const TERRAIN_DAMAGE           = 25;
 // Fewer spikes per attack for smoother gameplay
-const NUM_SPIKES_PER_ATTACK   = 8;
+const NUM_SPIKES_PER_ATTACK    = 8;
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
@@ -88,28 +91,19 @@ function spawnTarget() {
 setTimeout(spawnTarget, 2000);
 setInterval(spawnTarget, 30000);
 
-function terrainAttack(){
-  if(players.size===0) return;
-  const spikes=[];
-  const playerArr = [...players.values()];
-  for(let i=0;i<NUM_SPIKES_PER_ATTACK;i++){
-    let x,z;
-    if(playerArr.length>0 && Math.random()<0.5){
-      const p = playerArr[Math.random()*playerArr.length|0];
-      x = p.state.x || 0;
-      z = p.state.z || 0;
-    }else{
-      x=(Math.random()*2-1)*TERRAIN_HALF;
-      z=(Math.random()*2-1)*TERRAIN_HALF;
-    }
-    const h=2+Math.random()*6;
-    spikes.push({x,z,h});
-    const msg=JSON.stringify({
-      t:'terrainSpike', x, z, r:TERRAIN_ATTACK_RADIUS, delay:TERRAIN_SPIKE_DELAY, h
-    });
-    wss.clients.forEach(c=>c.readyState===1&&c.send(msg));
-  }
-  setTimeout(()=>{
+function sendSpike(x, z, h){
+  const msg = JSON.stringify({
+    t: 'terrainSpike',
+    x, z,
+    r: TERRAIN_ATTACK_RADIUS,
+    delay: TERRAIN_SPIKE_DELAY,
+    h
+  });
+  wss.clients.forEach(c => c.readyState === 1 && c.send(msg));
+}
+
+function applySpikeDamage(spikes){
+  setTimeout(() => {
     for(const [id,p] of players){
       for(const s of spikes){
         const dx=(p.state.x||0)-s.x;
@@ -118,21 +112,46 @@ function terrainAttack(){
         if(Math.hypot(dx,dz)<=TERRAIN_ATTACK_RADIUS && dy<=s.h+2){
           p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
           if(p.health<=0){
-            wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
+            wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id}))); 
             p.health=MAX_HEALTH;
           }
           break;
         }
       }
     }
-  },TERRAIN_SPIKE_DELAY);
+  }, TERRAIN_SPIKE_DELAY);
 }
-function scheduleTerrainAttack(){
-  terrainAttack();
-  const delay = TERRAIN_ATTACK_INTERVAL + Math.random()*TERRAIN_ATTACK_INTERVAL;
-  setTimeout(scheduleTerrainAttack, delay);
+
+function randomTerrainAttack(){
+  if(players.size===0) return;
+  const spikes=[];
+  for(let i=0;i<NUM_SPIKES_PER_ATTACK;i++){
+    const x=(Math.random()*2-1)*TERRAIN_HALF;
+    const z=(Math.random()*2-1)*TERRAIN_HALF;
+    const h=2+Math.random()*6;
+    spikes.push({x,z,h});
+    sendSpike(x,z,h);
+  }
+  applySpikeDamage(spikes);
 }
-setTimeout(scheduleTerrainAttack, TERRAIN_ATTACK_INTERVAL);
+
+function targetedTerrainAttack(){
+  if(players.size===0) return;
+  const playerArr=[...players.values()];
+  const target=playerArr[Math.random()*playerArr.length|0];
+  const spikes=[];
+  for(let i=0;i<NUM_SPIKES_PER_ATTACK;i++){
+    const x=target.state.x||0;
+    const z=target.state.z||0;
+    const h=2+Math.random()*6;
+    spikes.push({x,z,h});
+    sendSpike(x,z,h);
+  }
+  applySpikeDamage(spikes);
+}
+
+setInterval(randomTerrainAttack, RANDOM_ATTACK_INTERVAL);
+setInterval(targetedTerrainAttack, TARGETED_ATTACK_INTERVAL);
 
 /* ─────────────── CLIENT CONNECTION ───────────────────── */
 // Handle new WebSocket connections

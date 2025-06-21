@@ -104,7 +104,7 @@ window.onload = () => {
         if (now - lastTopTap < 300) {
           flyMode = true;
         } else if (!flyMode && onGround) {
-          vertVel = 12;
+          vertVel = 16;
           onGround = false;
         } else if (flyMode) {
           spaceHeld = true;
@@ -722,7 +722,7 @@ document.addEventListener('keydown',e=>{
     case'Space':
       spaceHeld=true;
       if(now-lastSpace<300) flyMode=!flyMode;
-      else if(onGround&&!flyMode){ vertVel=12; onGround=false; }
+      else if(onGround&&!flyMode){ vertVel=16; onGround=false; }
       lastSpace=now; break;
     case'KeyZ':case'KeyZ':
       zHeld =true;
@@ -909,7 +909,7 @@ function animate(now){
     const gY=meshHeightAt(character.position.x,character.position.z)+2;
     if(character.position.y<=gY){ character.position.y=gY; flyMode=false; onGround=true; vertVel=0; }
   }else{
-    vertVel-=30*dt; character.position.y+=vertVel*dt;
+    vertVel-=25*dt; character.position.y+=vertVel*dt;
     const gY=meshHeightAt(character.position.x,character.position.z)+2;
     if(character.position.y<=gY){ character.position.y=gY; vertVel=0; onGround=true; }
   }
