@@ -53,10 +53,6 @@ const projectiles = [];
 let nextShotId = 0;
 // Power-ups present in the world
 let powerups = [];
-// Pending team requests: id -> Map(targetId -> timestamp)
-const pendingTeam = new Map();
-const TEAM_REQ_WINDOW_MS = 2000;
-let nextTeamNumber = 1; // sequential team ids
 
 /* ──────────── NAMED COLOR PALETTE ────────────────────── */
 // A set of high-contrast color names
@@ -82,22 +78,21 @@ function pickNamedColour() {
 function packSnapshot() {
   return JSON.stringify({
     t: 'snapshot',
-    players: Object.fromEntries(
-      [...players.entries()].map(([id,p]) => [
-        id,
-        {
-          ...p.state,
-          color: p.color,
-          health: p.health,
-          shield: p.shield || 0,
-          speed: p.speed || 0,
-          double: p.doubleShots || 0,
-          kills: p.kills || 0,
-          deaths: p.deaths || 0,
-          team: p.team
-        }
-      ])
-    ),
+      players: Object.fromEntries(
+        [...players.entries()].map(([id,p]) => [
+          id,
+          {
+            ...p.state,
+            color: p.color,
+            health: p.health,
+            shield: p.shield || 0,
+            speed: p.speed || 0,
+            double: p.doubleShots || 0,
+            kills: p.kills || 0,
+            deaths: p.deaths || 0
+          }
+        ])
+      ),
     projectiles,
     powerups
   });
@@ -214,8 +209,7 @@ wss.on('connection', ws => {
     speed: 0,
     doubleShots: 0,
     kills: 0,
-    deaths: 0,
-    team: null
+    deaths: 0
   });
 
   // Send welcome packet with assigned ID, color, and noise seed
@@ -293,25 +287,24 @@ wss.on('connection', ws => {
         break;
       }
 
-      case 'hitPlayer': {
-        if (!players.has(id)) break;
-        const target = players.get(msg.target);
-        const attacker = players.get(id);
-        if (target && attacker) {
-          if (target.shield > 0) break;
-          if (attacker.team && target.team && attacker.team === target.team) break;
-          const idx = projectiles.findIndex(p => p.id===msg.shotId);
-          let mult = 1;
-          if (idx !== -1) {
-            const proj = projectiles[idx];
-            mult = 1 + 2 * (proj.c ?? 0);
-            projectiles.splice(idx,1);
-          }
-          const dmg = PROJECTILE_DAMAGE * mult;
-          target.health = Math.max(0, target.health - dmg);
-          if (target.health <= 0) {
-            attacker.kills += 1;
-            target.deaths += 1;
+        case 'hitPlayer': {
+          if (!players.has(id)) break;
+          const target = players.get(msg.target);
+          const attacker = players.get(id);
+          if (target && attacker) {
+            if (target.shield > 0) break;
+            const idx = projectiles.findIndex(p => p.id===msg.shotId);
+            let mult = 1;
+            if (idx !== -1) {
+              const proj = projectiles[idx];
+              mult = 1 + 2 * (proj.c ?? 0);
+              projectiles.splice(idx,1);
+            }
+            const dmg = PROJECTILE_DAMAGE * mult;
+            target.health = Math.max(0, target.health - dmg);
+            if (target.health <= 0) {
+              attacker.kills += 1;
+              target.deaths += 1;
             const spawn = respawnPlayer(msg.target);
             wss.clients.forEach(c => c.readyState===1 &&
               c.send(JSON.stringify({ t:'playerDied', id: msg.target, x: spawn.x, z: spawn.z })));
@@ -321,33 +314,6 @@ wss.on('connection', ws => {
         break;
       }
 
-      case 'teamRequest': {
-        const target = players.get(msg.target);
-        const requester = players.get(id);
-        if (target && requester) {
-          const dx = (requester.state.x||0) - (target.state.x||0);
-          const dz = (requester.state.z||0) - (target.state.z||0);
-          if (Math.hypot(dx, dz) <= 3) {
-            const now = Date.now();
-            let map = pendingTeam.get(id);
-            if (!map) { map = new Map(); pendingTeam.set(id, map); }
-            map.set(msg.target, now);
-
-            const tMap = pendingTeam.get(msg.target);
-            const tTime = tMap && tMap.get(id);
-            if (tTime && now - tTime <= TEAM_REQ_WINDOW_MS) {
-              const teamId = requester.team || target.team || nextTeamNumber++;
-              requester.team = teamId;
-              target.team = teamId;
-              requester.socket.send(JSON.stringify({ t:'teamJoin', with: target.color, team: teamId }));
-              target.socket.send(JSON.stringify({ t:'teamJoin', with: requester.color, team: teamId }));
-              map.delete(msg.target);
-              if (tMap) tMap.delete(id);
-            }
-          }
-        }
-        break;
-      }
     }
   });
 

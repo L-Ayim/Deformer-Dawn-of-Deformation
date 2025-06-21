@@ -37,7 +37,3 @@ want to trade visual quality for higher frame rates.
 - Spikes would normally erupt from the ground before dealing damage so alert players can dodge.
 - Characters briefly flash red when hurt so you can tell a hit landed.
 - Boomerang shots now register hits when striking any limb, not just the torso.
-- Press **F** while near another player to request teaming. If they also press
-  **F** within a couple of seconds, you will join the same team.
-  Teams are numbered sequentially, starting at 1, and a short effect plays when
-  a request is sent and when a team is formed.
