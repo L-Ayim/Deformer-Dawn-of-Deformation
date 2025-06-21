@@ -211,7 +211,7 @@ let targetMesh     = null;   // Three.js mesh for the pillar/flag
 
 /* ──────────────────── DOM + RENDER TARGET SET-UP ─────────────────── */
 const scene     = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
+scene.background = new THREE.Color(0xd3d3d3);
 // --- SKY SPHERE SETUP ---
 let skyMesh;
 function generateSkyTexture(size){
@@ -249,6 +249,18 @@ function generateSkyTexture(size){
 // });
 // skyMesh=new THREE.Mesh(geometry,material);
 // scene.add(skyMesh);
+
+// Simple light gray sky sphere with PBR material
+skyMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(350, 64, 64),
+  new THREE.MeshStandardMaterial({
+    color: 0xd3d3d3,
+    metalness: 1,
+    roughness: 1,
+    side: THREE.BackSide
+  })
+);
+scene.add(skyMesh);
 // --- END SKY SPHERE SETUP ---
 
 scene.add(new THREE.HemisphereLight(0x87ceeb, 0x664422, 0.6));
@@ -404,8 +416,8 @@ function initTerrain(){
   // Use a simple material without external textures or vertex colors
   const mat = new THREE.MeshStandardMaterial({
     color: 0x444444, // darker gray for the terrain
-    metalness: 0.1,
-    roughness: 0.9
+    metalness: 1,
+    roughness: 1
   });
   const geo = new THREE.PlaneGeometry(GRID*SPAN, GRID*SPAN, GRID, GRID);
   geo.rotateX(-Math.PI/2);
