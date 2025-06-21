@@ -27,7 +27,7 @@ const TERRAIN_ATTACK_RADIUS    = 3;
 const TERRAIN_SPIKE_DELAY      = 1000; // ms delay before damage applies
 const TERRAIN_DAMAGE           = 25;
 // Fewer spikes per attack for smoother gameplay
-const NUM_SPIKES_PER_ATTACK    = 8;
+const NUM_SPIKES_PER_ATTACK    = 2;
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
