@@ -73,6 +73,7 @@ export function startGame(){
 
     const CLOCK = new THREE.Clock();
     let lastFrame = 0;
+    let walkCycle = 0;
 
     function animate(){
       requestAnimationFrame(animate);
@@ -158,6 +159,14 @@ export function startGame(){
 
       if(Math.abs(character.position.x)>HALF||Math.abs(character.position.z)>HALF) teleport();
 
+      if(state.flyModeRef.value){
+        bodyMesh.geometry = octGeo;
+        Larm.visible = Rarm.visible = Lleg.visible = Rleg.visible = false;
+      }else{
+        bodyMesh.geometry = boxGeo;
+        Larm.visible = Rarm.visible = Lleg.visible = Rleg.visible = true;
+      }
+
       if(!state.flyModeRef.value){
         const u=(character.position.x+HALF)/SPAN,v=(character.position.z+HALF)/SPAN;
         const n=sampleHybridNormal(u,v), up=new THREE.Vector3(0,1,0);
@@ -177,13 +186,10 @@ export function startGame(){
       }
 
       const walking=dir.lengthSq()>0&&!state.flyModeRef.value;
-      if(walking){
-        const swing=Math.sin(performance.now()*0.01*10)*0.5;
-        Larm.rotation.x=swing; Rarm.rotation.x=-swing;
-        Lleg.rotation.x=-swing; Rleg.rotation.x=swing;
-      }else{
-        Larm.rotation.x=Rarm.rotation.x=Lleg.rotation.x=Rleg.rotation.x=0;
-      }
+      if(walking) walkCycle += dt*10; else walkCycle = 0;
+      const swing=walking?Math.sin(walkCycle)*0.5:0;
+      Larm.rotation.x=swing; Rarm.rotation.x=-swing;
+      Lleg.rotation.x=-swing; Rleg.rotation.x=swing;
 
       const Rcam=8;
       const camOff=new THREE.Vector3(
