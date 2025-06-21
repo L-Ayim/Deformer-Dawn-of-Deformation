@@ -172,6 +172,15 @@ wss.on('connection', ws => {
     players.delete(id);
     scores.delete(id);
 
+    // Broadcast updated scores after removing this player
+    const scoreMsg = JSON.stringify({
+      t: 'scoreUpdate',
+      scores: Object.fromEntries(scores)
+    });
+    wss.clients.forEach(c =>
+      c.readyState===1 && c.send(scoreMsg)
+    );
+
     // Remove any projectiles belonging to them
     for (let i = projectiles.length-1; i>=0; i--) {
       if (projectiles[i].owner === id) projectiles.splice(i,1);
