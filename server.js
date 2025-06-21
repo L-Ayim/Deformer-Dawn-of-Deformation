@@ -219,16 +219,17 @@ wss.on('connection', ws => {
 
       // Raw input (movement/keys) from client
       case 'input':
-        players.get(id).input = msg.input;
+        if (players.has(id)) players.get(id).input = msg.input;
         break;
 
       // Client's current pose/state
       case 'state':
-        players.get(id).state = msg.state;
+        if (players.has(id)) players.get(id).state = msg.state;
         break;
 
       // A new boomerang shot fired
       case 'shot': {
+        if (!players.has(id)) break;
         const { x,y,z,dir,c } = msg.data;
         projectiles.push({
           id: nextShotId++,
@@ -241,6 +242,7 @@ wss.on('connection', ws => {
 
       // Client caught or despawned one of their own shots
       case 'catch': {
+        if (!players.has(id)) break;
         const idx = projectiles.findIndex(p => p.id===msg.shotId);
         if (idx !== -1) projectiles.splice(idx,1);
         break;
@@ -256,6 +258,7 @@ wss.on('connection', ws => {
 
       // Client reports picking up a power-up
       case 'pickup': {
+        if (!players.has(id)) break;
         const idx = powerups.findIndex(pu => pu.id === msg.powerupId);
         if (idx !== -1) {
           const item = powerups[idx];
@@ -280,6 +283,7 @@ wss.on('connection', ws => {
       }
 
       case 'hitPlayer': {
+        if (!players.has(id)) break;
         const target = players.get(msg.target);
         if (target) {
           if (target.shield > 0) break;

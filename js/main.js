@@ -178,10 +178,19 @@ let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
 let   myLives     = START_LIVES;
+let   spectator   = false;
 
 function updateHealthBar() {
   const fill = document.getElementById('health-fill');
   if (fill) fill.style.width = `${myHealth}%`;
+}
+
+function updateLivesDisplay() {
+  const el = document.getElementById('life-count');
+  if (el) {
+    el.textContent = myLives;
+    el.style.color = myColor.getStyle();
+  }
 }
 let   character, bodyMesh, headMesh, Larm, Rarm, Lleg, Rleg;
 let   boxGeo, octGeo, bulletMat, loadedBullet = null;
@@ -281,6 +290,8 @@ socket.addEventListener('message', e => {
     case 'welcome':
       myId    = msg.id;
       myColor = new THREE.Color().setStyle(msg.color);
+      myLives = START_LIVES;
+      updateLivesDisplay();
 
       // Update avatar colors if we've already built the character
       if (bodyMesh) {
@@ -324,7 +335,9 @@ socket.addEventListener('message', e => {
         ghosts.delete(msg.id);
       }
       if (msg.id === myId) {
-        alert('Game over!');
+        alert('Game over! You are now spectating.');
+        spectator = true;
+        if (character) scene.remove(character);
       }
     } break;
   }
@@ -335,6 +348,7 @@ noise = new SimplexNoise(mapSeed);
 initTerrain().then(() => {
   initCharacter();
   updateHealthBar();
+  updateLivesDisplay();
   requestAnimationFrame(animate);
 });
 
@@ -478,6 +492,7 @@ function spawnLoadedBullet(){
   character.add(loadedBullet);
 }
 function shootProjectile(){
+  if (spectator) return;
   if(!loadedBullet) return;
   const c=currentCharge;
   const speedOut=THREE.MathUtils.lerp(MIN_SPEED_OUT,MAX_SPEED_OUT,c);
@@ -523,6 +538,7 @@ function shootProjectile(){
 }
 
 function recallProjectile(){
+  if (spectator) return;
   if(loadedBullet){
     charging = false;
     currentCharge = 0;
@@ -611,6 +627,7 @@ function makeRemoteAvatar(col){
   if (pack[myId] && typeof pack[myId].health === 'number') {
     if (typeof pack[myId].lives === 'number') {
       myLives = pack[myId].lives;
+      updateLivesDisplay();
     }
     const newH = pack[myId].health;
     if(newH < prevMyHealth && bodyMesh){
@@ -721,6 +738,7 @@ function makeRemoteAvatar(col){
     remoteShots.set(s.id,true);
   });
   updatePlayerPathMeshes();
+  updateRemoteLabels();
 }
 
 /* ────────────────────────── INPUT HANDLERS ───────────────────────── */
@@ -990,12 +1008,10 @@ function animate(now){
   if (skyMesh) {
   skyMesh.position.copy(camera.position);
 }
-
-
   renderer.render(scene,camera);
 
   updatePlayerPathMeshes();
-
+  updateRemoteLabels();
 
 }
 window.addEventListener('resize',()=>{
@@ -1092,6 +1108,32 @@ function updatePlayerPathMeshes() {
     );
     scene.add(mesh);
     playerPathMeshes.set(id, mesh);
+  });
+}
+
+function updateRemoteLabels() {
+  const container = document.getElementById('labels');
+  if (!container) return;
+  ghosts.forEach((av, id) => {
+    let label = av.userData.label;
+    if (!label) {
+      label = document.createElement('div');
+      label.className = 'player-label';
+      container.appendChild(label);
+      av.userData.label = label;
+    }
+    if (!av.visible) {
+      label.style.display = 'none';
+      return;
+    }
+    label.style.display = 'block';
+    label.textContent = av.userData.lives ?? START_LIVES;
+    label.style.color = av.userData.mat.color.getStyle();
+    const pos = av.userData.head.getWorldPosition(new THREE.Vector3());
+    pos.project(camera);
+    const x = (pos.x * 0.5 + 0.5) * innerWidth;
+    const y = (-pos.y * 0.5 + 0.5) * innerHeight - 40;
+    label.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
   });
 }
 
