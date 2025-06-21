@@ -31,6 +31,17 @@ const NUM_SPIKES_PER_ATTACK    = 2;
 // Toggle to completely disable terrain spike attacks
 const TERRAIN_ATTACKS_ENABLED  = false;
 
+// Power-up configuration
+const POWERUP_COUNTS = {
+  health: 10,
+  double: 5,
+  shield: 5,
+  speed: 5
+};
+const SHIELD_DURATION = 10; // seconds
+const SPEED_DURATION  = 10; // seconds
+const DOUBLE_SHOTS    = 10; // number of double shots
+
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
 const wss = new WebSocketServer({ port: PORT });
@@ -40,8 +51,8 @@ const players = new Map();
 const projectiles = [];
 // Running ID for each new shot
 let nextShotId = 0;
-// Current active target (or null if none)
-let activeTarget = null;
+// Power-ups present in the world
+let powerups = [];
 
 /* ──────────── NAMED COLOR PALETTE ────────────────────── */
 // A set of high-contrast color names
@@ -67,31 +78,40 @@ function pickNamedColour() {
 function packSnapshot() {
   return JSON.stringify({
     t: 'snapshot',
-    // players: id → { x,y,z,yaw,pitch,flyMode,color }
     players: Object.fromEntries(
       [...players.entries()].map(([id,p]) => [
         id,
-        { ...p.state, color: p.color, health: p.health }
+        {
+          ...p.state,
+          color: p.color,
+          health: p.health,
+          shield: p.shield || 0,
+          speed: p.speed || 0,
+          double: p.doubleShots || 0
+        }
       ])
     ),
-    // array of projectile records
-    projectiles
+    projectiles,
+    powerups
   });
 }
 
-/* ───────────── TARGET SPAWNING & BROADCAST ───────────── */
-// Create a new target somewhere in the world and notify all clients
-function spawnTarget() {
-  const id = uuid();
-  const x  = (Math.random()*2 - 1) * TERRAIN_HALF;
-  const z  = (Math.random()*2 - 1) * TERRAIN_HALF;
-  activeTarget = { id, x, z };
-  const msg = JSON.stringify({ t:'newTarget', target: activeTarget });
-  wss.clients.forEach(c => c.readyState===1 && c.send(msg));
+/* ───────────── POWER-UP SPAWNING ───────────── */
+function spawnInitialPowerups(){
+  powerups = [];
+  for(const [type,count] of Object.entries(POWERUP_COUNTS)){
+    for(let i=0;i<count;i++){
+      powerups.push({
+        id: uuid(),
+        type,
+        x: (Math.random()*2-1)*TERRAIN_HALF,
+        z: (Math.random()*2-1)*TERRAIN_HALF
+      });
+    }
+  }
 }
-// First spawn in 2s, then every 30s
-setTimeout(spawnTarget, 2000);
-setInterval(spawnTarget, 30000);
+// Spawn once on startup
+spawnInitialPowerups();
 
 function sendSpike(x, z, h){
   const msg = JSON.stringify({
@@ -112,6 +132,7 @@ function applySpikeDamage(spikes){
         const dz=(p.state.z||0)-s.z;
         const dy=(p.state.y||0);
         if(Math.hypot(dx,dz)<=TERRAIN_ATTACK_RADIUS && dy<=s.h+2){
+          if(p.shield>0) break;
           p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
           if(p.health<=0){
             wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id}))); 
@@ -165,7 +186,15 @@ wss.on('connection', ws => {
   const color = pickNamedColour();
 
   // Initialize player state
-  players.set(id, { input:{}, state:{}, color, health: MAX_HEALTH });
+  players.set(id, {
+    input:{},
+    state:{},
+    color,
+    health: MAX_HEALTH,
+    shield: 0,
+    speed: 0,
+    doubleShots: 0
+  });
 
   // Send welcome packet with assigned ID, color, and noise seed
   ws.send(JSON.stringify({ t:'welcome', id, color, seed: NOISE_SEED }));
@@ -214,13 +243,27 @@ wss.on('connection', ws => {
         });
         break;
 
-      // Client reports hitting the active target
-      case 'hitTarget': {
-        if (activeTarget && msg.targetId === activeTarget.id) {
+      // Client reports picking up a power-up
+      case 'pickup': {
+        const idx = powerups.findIndex(pu => pu.id === msg.powerupId);
+        if (idx !== -1) {
+          const item = powerups[idx];
+          powerups.splice(idx,1);
           const p = players.get(id);
-          p.health = Math.min(MAX_HEALTH, p.health + 20);
-          activeTarget = null;
-          spawnTarget();
+          switch(item.type){
+            case 'health':
+              p.health = Math.min(MAX_HEALTH, p.health + 20);
+              break;
+            case 'double':
+              p.doubleShots = DOUBLE_SHOTS;
+              break;
+            case 'shield':
+              p.shield = SHIELD_DURATION;
+              break;
+            case 'speed':
+              p.speed = SPEED_DURATION;
+              break;
+          }
         }
         break;
       }
@@ -228,6 +271,7 @@ wss.on('connection', ws => {
       case 'hitPlayer': {
         const target = players.get(msg.target);
         if (target) {
+          if (target.shield > 0) break;
           const idx = projectiles.findIndex(p => p.id===msg.shotId);
           let mult = 1;
           if (idx !== -1) {
@@ -269,6 +313,11 @@ setInterval(() => {
   for (let i = projectiles.length-1; i>=0; i--) {
     projectiles[i].ttl -= dt;
     if (projectiles[i].ttl <= 0) projectiles.splice(i,1);
+  }
+  // Update player effect timers
+  for(const p of players.values()){
+    if(p.shield>0) p.shield = Math.max(0, p.shield - dt);
+    if(p.speed>0) p.speed = Math.max(0, p.speed - dt);
   }
   // Broadcast world snapshot
   const packet = packSnapshot();
