@@ -6,6 +6,18 @@ body {
   overflow: hidden;
 }
 
+html, body {
+  height: 100%;
+}
+
+/* main WebGL canvas */
+canvas:not(#minimap) {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
 /* Idle-hint panel */
 #info {
   position: absolute;
