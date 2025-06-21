@@ -46,6 +46,8 @@ canvas {
   height: 24px;
   transform: translateX(-50%) rotate(0deg);
   transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+  perspective: 800px;
   pointer-events: none;
   z-index: 110;
   display: none;
