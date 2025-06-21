@@ -546,6 +546,18 @@ function shootProjectile(){
   }
   loadedBullet=null;
 }
+
+function recallProjectile(){
+  if(loadedBullet){
+    charging = false;
+    currentCharge = 0;
+    shootProjectile();
+    return;
+  }
+  for(const p of projectiles){
+    if(p.id===undefined) p.returning = true;
+  }
+}
 function teleport(){
   const x=(Math.random()-0.5)*GRID*SPAN, z=(Math.random()-0.5)*GRID*SPAN;
   const y=meshHeightAt(x,z)+1;
@@ -708,6 +720,9 @@ document.addEventListener('keydown',e=>{
       zHeld =true;
       if(flyMode&&now-lastZ<300) flyMode=false;
       lastZ=now; break;
+    case'KeyR':
+      recallProjectile();
+      break;
     case'Escape':teleport();break;
   }
 });
