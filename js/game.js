@@ -8,6 +8,14 @@ export function startGame(){
   const mapSeed = '🌎';
   const scene   = new THREE.Scene();
   const camera  = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(0, 5, 10);
+  camera.lookAt(0, 0, 0);
+
+  const ambient = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(50, 100, 50);
+  scene.add(ambient, dirLight);
+
   const renderer= new THREE.WebGLRenderer({ antialias:true });
   renderer.setSize(innerWidth, innerHeight);
   document.body.appendChild(renderer.domElement);
