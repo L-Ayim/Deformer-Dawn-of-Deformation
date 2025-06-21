@@ -193,7 +193,7 @@ let powerupTimer = 0;
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
-let   spectator   = false;
+let   spectator   = true;
 const scoreboardEl= document.getElementById('scoreboard');
 
 function updateHealthBar() {
@@ -306,6 +306,15 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, PIXEL_RATIO_CAP));
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
   if (isMobile) setupMobileControls();
+
+  const startBtn = document.getElementById('start-button');
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
+      document.getElementById('start-screen').style.display = 'none';
+      spectator = false;
+      if (!isMobile) renderer.domElement.requestPointerLock?.();
+    });
+  }
 
 /* directional paths to other players */
 const playerPathMeshes = new Map();
