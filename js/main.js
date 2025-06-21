@@ -201,6 +201,7 @@ let targetMesh     = null;   // Three.js mesh for the pillar/flag
 
 /* ──────────────────── DOM + RENDER TARGET SET-UP ─────────────────── */
 const scene     = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
 // --- SKY SPHERE SETUP ---
 let skyMesh;
 function generateSkyTexture(size){
@@ -228,15 +229,16 @@ function generateSkyTexture(size){
   tex.repeat.set(3,2);
   return tex;
 }
-const skyTex = new THREE.TextureLoader().load('assets/star_sky.jpg');
-skyTex.wrapS = skyTex.wrapT = THREE.RepeatWrapping;
-const geometry=new THREE.SphereGeometry(350,64,64);
-const material=new THREE.MeshBasicMaterial({
-  map: skyTex,
-  side:THREE.BackSide
-});
-skyMesh=new THREE.Mesh(geometry,material);
-scene.add(skyMesh);
+// Commented out static sky texture for a simple dark backdrop
+// const skyTex = new THREE.TextureLoader().load('assets/star_sky.jpg');
+// skyTex.wrapS = skyTex.wrapT = THREE.RepeatWrapping;
+// const geometry=new THREE.SphereGeometry(350,64,64);
+// const material=new THREE.MeshBasicMaterial({
+//   map: skyTex,
+//   side:THREE.BackSide
+// });
+// skyMesh=new THREE.Mesh(geometry,material);
+// scene.add(skyMesh);
 // --- END SKY SPHERE SETUP ---
 
 scene.add(new THREE.HemisphereLight(0x87ceeb, 0x664422, 0.6));
@@ -389,17 +391,9 @@ function generateNoiseTexture(size){
 }
 function initTerrain(){
   return new Promise(res => {
-  const loader = new THREE.TextureLoader();
-  const diffuseMap = loader.load('assets/ruggeddifused.jpg');
-  const overlayMap = loader.load('assets/ruggeddiffused.png');
-  const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
-  diffuseMap.anisotropy = maxAnisotropy;
-  overlayMap.anisotropy = maxAnisotropy;
-
+  // Use a simple material without external textures
   const mat = new THREE.MeshStandardMaterial({
-    map: diffuseMap,
-    aoMap: overlayMap,
-    aoMapIntensity: 1.5,
+    color: 0x222222,
     metalness: 0.1,
     roughness: 0.9,
     vertexColors: true
