@@ -403,7 +403,7 @@ function initTerrain(){
   return new Promise(res => {
   // Use a simple material without external textures or vertex colors
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x556B2F,
+    color: 0x444444, // darker gray for the terrain
     metalness: 0.1,
     roughness: 0.9
   });
