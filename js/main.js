@@ -1007,9 +1007,8 @@ function createPathStrip(from, to, startWidth = 1, endWidth = 0.5,
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const x = THREE.MathUtils.lerp(from.x, to.x, t);
+    const y = THREE.MathUtils.lerp(from.y, to.y, t);
     const z = THREE.MathUtils.lerp(from.z, to.z, t);
-    const h = meshHeightAt(x, z);
-    const y = (Number.isFinite(h) ? h : 0) + 0.05;
     const width = THREE.MathUtils.lerp(startWidth, endWidth, t);
     const offX = nx * width * 0.5;
     const offZ = nz * width * 0.5;
@@ -1047,9 +1046,9 @@ function createPathStrip(from, to, startWidth = 1, endWidth = 0.5,
 }
 
 function updatePathMesh() {
-  if (!activeTarget || !terrain || !character) return;
-  const start = character.position.clone();
-  const endY = meshHeightAt(activeTarget.x, activeTarget.z) + 0.05;
+  if (!activeTarget || !terrain || !character || !bodyMesh) return;
+  const start = bodyMesh.getWorldPosition(new THREE.Vector3());
+  const endY = meshHeightAt(activeTarget.x, activeTarget.z) + 1.5;
   const end = new THREE.Vector3(activeTarget.x, endY, activeTarget.z);
   const geo = createPathStrip(start, end, 1.5, 0.4, 80,
                               myColor, new THREE.Color(0xffff00));
@@ -1071,7 +1070,7 @@ function updatePathMesh() {
 }
 
 function updatePlayerPathMeshes() {
-  if (!terrain || !character) return;
+  if (!terrain || !character || !bodyMesh) return;
   ghosts.forEach((av, id) => {
     if (!av.visible) {
       const old = playerPathMeshes.get(id);
@@ -1084,9 +1083,8 @@ function updatePlayerPathMeshes() {
       return;
     }
 
-    const start = character.position.clone();
-    const endY = meshHeightAt(av.position.x, av.position.z) + 0.05;
-    const end = new THREE.Vector3(av.position.x, endY, av.position.z);
+    const start = bodyMesh.getWorldPosition(new THREE.Vector3());
+    const end = av.userData.body.getWorldPosition(new THREE.Vector3());
     const geo = createPathStrip(start, end, 1.2, 0.3, 60,
                                 myColor, av.userData.mat.color);
 
