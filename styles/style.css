@@ -139,6 +139,27 @@ canvas:not(#minimap) {
 }
 #up-button { bottom: 90px; }
 #down-button { bottom: 20px; }
+#sprint-button {
+  display: none;
+  position: absolute;
+  bottom: 20px;
+  right: 250px;
+  width: 60px;
+  height: 60px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid white;
+  border-radius: 50%;
+  color: white;
+  font-family: sans-serif;
+  font-size: 12px;
+  line-height: 60px;
+  text-align: center;
+  z-index: 12;
+}
+#sprint-button:active {
+  transform: scale(1.1);
+  opacity: 0.9;
+}
 #up-button::before,
 #down-button::before {
   content: '';

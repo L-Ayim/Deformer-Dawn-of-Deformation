@@ -8,6 +8,7 @@ window.onload = () => {
     document.getElementById('joystick-zone').style.display = 'block';
     document.getElementById('shoot-button').style.display = 'block';
     document.getElementById('up-button').style.display = 'block';
+    document.getElementById('sprint-button').style.display = 'block';
 
     // ─── Movement Joystick ───────────────
     const joystick = nipplejs.create({
@@ -37,7 +38,8 @@ window.onload = () => {
       !el.closest('#joystick-zone') &&
       !el.closest('#shoot-button') &&
       !el.closest('#up-button') &&
-      !el.closest('#down-button');
+      !el.closest('#down-button') &&
+      !el.closest('#sprint-button');
 
     renderer.domElement.addEventListener('touchstart', e => {
       const t = e.changedTouches[0];
@@ -122,6 +124,14 @@ window.onload = () => {
 
     downBtn.addEventListener('touchstart', e => { e.preventDefault(); onDownStart(); });
     downBtn.addEventListener('touchend',   e => { e.preventDefault(); onDownEnd(); });
+
+    // ─── Sprint Button ───────────────────
+    const sprintBtn = document.getElementById('sprint-button');
+    const onSprintStart = () => { shiftHeld = true; };
+    const onSprintEnd   = () => { shiftHeld = false; };
+    sprintBtn.addEventListener('touchstart', e => { e.preventDefault(); onSprintStart(); });
+    sprintBtn.addEventListener('touchend',   e => { e.preventDefault(); onSprintEnd(); });
+    sprintBtn.addEventListener('touchcancel', onSprintEnd);
   }
 
 
