@@ -16,7 +16,7 @@ window.onload = () => {
       mode: 'static',
       position: { left: '75px', bottom: '75px' },
       color: 'white',
-      size: 200
+      size: 150
     });
 
     joystick.on('move', (evt, data) => {
@@ -230,10 +230,8 @@ function generateSkyTexture(size){
 // Simple light gray sky sphere with PBR material
 skyMesh = new THREE.Mesh(
   new THREE.SphereGeometry(350, 64, 64),
-  new THREE.MeshStandardMaterial({
-    color: 0xd3d3d3,
-    metalness: 1,
-    roughness: 1,
+  new THREE.MeshBasicMaterial({
+    color: 0x87cefa, // consistent sky color
     side: THREE.BackSide
   })
 );
