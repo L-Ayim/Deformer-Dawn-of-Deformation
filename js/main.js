@@ -150,11 +150,12 @@ const CHARGE_TIME_MAX = 1.5,  MIN_SCALE = 1, MAX_SCALE = 3;
 const MIN_SPEED_OUT   = SPEED_OUT,  MAX_SPEED_OUT = SPEED_OUT * 2;
 const MIN_RANGE_OUT   = MAX_OUT_RANGE, MAX_RANGE_OUT = MAX_OUT_RANGE * 2;
 const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
-const NOISE_SCALE     = 0.002, NOISE_AMP = 8, NOISE_OCTS = 5;
+const NOISE_SCALE     = 0.004, NOISE_AMP = 15, NOISE_OCTS = 6;
 const COLOR_FREQ      = 0.1;               // noise frequency for vertex colors
 const TEXTURE_SIZE    = 256;               // resolution of procedural texture
 const MAX_DT          = 0.05;
 const mapSeed         = '🌎';                 // constant → identical terrain
+const noiseSky        = new SimplexNoise(mapSeed + 'sky');
 
 /* ───────────────────────── GLOBAL SINGLETONS ──────────────────────── */
 const socket      = new WebSocket(WS_URL);
@@ -202,18 +203,38 @@ let targetMesh     = null;   // Three.js mesh for the pillar/flag
 const scene     = new THREE.Scene();
 // --- SKY SPHERE SETUP ---
 let skyMesh;
-const loader = new THREE.TextureLoader();
-loader.load('assets/star_sky.jpg', function(texture) {
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(3, 2); // adjust for more/less tiling as you like
-  const geometry = new THREE.SphereGeometry(350, 64, 64);
-  const material = new THREE.MeshBasicMaterial({
-    map: texture,
-    side: THREE.BackSide
-  });
-  skyMesh = new THREE.Mesh(geometry, material);
-  scene.add(skyMesh);
+function generateSkyTexture(size){
+  const canvas=document.createElement('canvas');
+  canvas.width=canvas.height=size;
+  const ctx=canvas.getContext('2d');
+  const img=ctx.createImageData(size,size);
+  for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
+      const n1=noiseSky.noise2D(x/size*3,y/size*3);
+      const n2=noiseSky.noise2D((x+1000)/size*2,(y+1000)/size*2);
+      const hue=((n1+n2)*0.25+0.5)%1;
+      const c=new THREE.Color();
+      c.setHSL(hue,0.7,0.5);
+      const idx=(y*size+x)*4;
+      img.data[idx]=c.r*255;
+      img.data[idx+1]=c.g*255;
+      img.data[idx+2]=c.b*255;
+      img.data[idx+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  const tex=new THREE.CanvasTexture(canvas);
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+  tex.repeat.set(3,2);
+  return tex;
+}
+const geometry=new THREE.SphereGeometry(350,64,64);
+const material=new THREE.MeshBasicMaterial({
+  map: generateSkyTexture(512),
+  side:THREE.BackSide
 });
+skyMesh=new THREE.Mesh(geometry,material);
+scene.add(skyMesh);
 // --- END SKY SPHERE SETUP ---
 
 scene.add(new THREE.HemisphereLight(0x87ceeb, 0x664422, 0.6));
@@ -390,9 +411,11 @@ function initTerrain(){
     const z = pos.getZ(i) + HALF;
     const y = getNoise(x/SPAN, z/SPAN);
     pos.setY(i, y);
-    const n = noise.noise2D(x*COLOR_FREQ, z*COLOR_FREQ);
+    const n1 = noise.noise2D(x*COLOR_FREQ, z*COLOR_FREQ);
+    const n2 = noise.noise2D((x+1000)*COLOR_FREQ*1.3, (z+1000)*COLOR_FREQ*1.3);
     const hNorm = (y + NOISE_AMP) / (NOISE_AMP*2);
-    color.setHSL(0.3 - hNorm*0.25 + n*0.05, 0.6, 0.3 + hNorm*0.5);
+    const hue = ((n1+n2)*0.25+0.5)%1;
+    color.setHSL(hue, 0.7, 0.4 + hNorm*0.4);
     colors[i*3] = color.r; colors[i*3+1] = color.g; colors[i*3+2] = color.b;
   }
   pos.needsUpdate = true;
@@ -417,9 +440,11 @@ function deformTerrain(impact,radius,depth){
     const x=pos.getX(i)+HALF;
     const z=pos.getZ(i)+HALF;
     const y=pos.getY(i);
-    const n=noise.noise2D(x*COLOR_FREQ,z*COLOR_FREQ);
+    const n1=noise.noise2D(x*COLOR_FREQ,z*COLOR_FREQ);
+    const n2=noise.noise2D((x+1000)*COLOR_FREQ*1.3,(z+1000)*COLOR_FREQ*1.3);
     const hNorm=(y+NOISE_AMP)/(NOISE_AMP*2);
-    tmpColor.setHSL(0.3 - hNorm*0.25 + n*0.05,0.6,0.3 + hNorm*0.5);
+    const hue=((n1+n2)*0.25+0.5)%1;
+    tmpColor.setHSL(hue,0.7,0.4 + hNorm*0.4);
     col.setXYZ(i,tmpColor.r,tmpColor.g,tmpColor.b);
   }
   pos.needsUpdate=true;
