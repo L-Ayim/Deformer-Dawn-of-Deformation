@@ -162,20 +162,6 @@ const tmpVec      = new THREE.Vector3();
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
-// ─── insert here ───
-const scores = new Map();  // id → score
-
-function updateScoreboard() {
-  const ol = document.getElementById('leaderboard-list');
-  ol.innerHTML = '';
-  [...scores.entries()]
-    .sort((a,b) => b[1] - a[1])
-    .forEach(([id, pts]) => {
-      const li = document.createElement('li');
-      li.textContent = (id === myId ? 'You' : id) + ': ' + pts;
-      ol.appendChild(li);
-    });
-}
 
 function updateHealthBar() {
   const fill = document.getElementById('health-fill');
@@ -271,16 +257,13 @@ let pathMesh = null;
 
 /* simple “idle controls” overlay fade */
 const infoEl     = document.getElementById('info');
-const leaderboardEl = document.getElementById('leaderboard');
 let   showTimer  = null;
 ['mousemove','mousedown','keydown','touchstart'].forEach(evt =>
   document.addEventListener(evt, () => {
     infoEl.style.opacity = '0';
-    leaderboardEl.style.opacity = '0';
     clearTimeout(showTimer);
     showTimer = setTimeout(() => {
       infoEl.style.opacity = '1';
-      leaderboardEl.style.opacity = '1';
     }, 10000);
   }, { passive:true })
 );
@@ -289,15 +272,6 @@ let   showTimer  = null;
 socket.addEventListener('message', e => {
   const msg = JSON.parse(e.data);
   switch (msg.t) {
-case 'scoreUpdate': {
-  // new: full‐board seed
-  // msg.scores is an object { id: score, … }
-  Object.entries(msg.scores).forEach(([id, pts]) => {
-    scores.set(id, pts);
-  });
-  updateScoreboard();
-  break;
-}
 
     case 'welcome':
       myId    = msg.id;
@@ -313,9 +287,6 @@ case 'scoreUpdate': {
         bulletMat.emissive.copy(myColor).multiplyScalar(0.25);
       }
 
-      // NOW it’s safe to seed your entry
-      scores.set(myId, 0);
-      updateScoreboard();
       break;
     case 'snapshot':
       applySnapshot(msg);
@@ -598,8 +569,14 @@ function makeRemoteAvatar(col){
   const Lleg=mkLeg(), Rleg=mkLeg();
   Lleg.position.set(-0.3,-0.9,0); Rleg.position.set(0.3,-0.9,0);
   root.add(Lleg,Rleg);
+  const hbMat = new THREE.SpriteMaterial({ color:0x00ff00 });
+  const hb    = new THREE.Sprite(hbMat);
+  hb.scale.set(1,0.1,1);
+  hb.position.set(0,3.6,0);
+  root.add(hb);
   root.userData={ body,head,Larm,Rarm,Lleg,Rleg, mat,
-    boxGeo, octGeo:new THREE.OctahedronGeometry(1,0).rotateX(Math.PI/2)};
+    boxGeo, octGeo:new THREE.OctahedronGeometry(1,0).rotateX(Math.PI/2),
+    healthBar:hb };
   scene.add(root);
   ensureRemoteHasLoadedBullet(root,col);
   return root;
@@ -607,22 +584,6 @@ function makeRemoteAvatar(col){
 
 /* ────────────────────────── SNAPSHOT HANDLER ─────────────────────── */
   function applySnapshot({ players:pack, projectiles:shots }){
-   // ─── SPREADSHEET SEEDING ───
-  // For every player the server knows about, make sure we have an entry
-  Object.keys(pack).forEach(id => {
-    if (!scores.has(id)) {
-      scores.set(id, 0);
-    }
-  });
-
-  for (const id of [...scores.keys()]) {
-    if (!(id in pack)) {
-      scores.delete(id);
-    }
-  }
-
-  updateScoreboard();
-
   if (pack[myId] && typeof pack[myId].health === 'number') {
     myHealth = pack[myId].health;
     const scale = Math.max(0, myHealth / MAX_HEALTH);
@@ -647,6 +608,8 @@ function makeRemoteAvatar(col){
       const scale = Math.max(0, st.health / MAX_HEALTH);
       av.userData.body.scale.y = scale;
       av.userData.body.visible = scale > 0;
+      av.userData.healthBar.material.color.setHSL(scale * 0.3, 1, 0.5);
+      av.userData.healthBar.scale.x = Math.max(0.01, scale);
     }
 
     const geo = st.flyMode ? av.userData.octGeo : av.userData.boxGeo;
@@ -675,7 +638,10 @@ function makeRemoteAvatar(col){
     prevPos.set(id,{x:st.x,z:st.z});
     av.visible=true;
   }
-  ghosts.forEach((av,id)=>{ if(!(id in pack)) av.visible=false; });
+  ghosts.forEach((av,id)=>{
+    if(!(id in pack)) av.visible=false;
+    av.userData.healthBar.lookAt(camera.position);
+  });
 
   /* ---------- remote bullets ---------- */
   for(let i=projectiles.length-1;i>=0;i--){
@@ -805,8 +771,7 @@ function animate(now){
         }
       });
       if(hitPlayer){
-        catchBoomerang(p);
-        continue;
+        p.returning = true;
       }
     }
     if(hitGround){

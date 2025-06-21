@@ -18,17 +18,15 @@ const TERRAIN_HALF  = 100;
 const TARGET_RADIUS = 5;
 const MAX_HEALTH    = 100;
 const PROJECTILE_DAMAGE = 25;
-const TERRAIN_ATTACK_INTERVAL = 15000;
+const TERRAIN_ATTACK_INTERVAL = 5000;
 const TERRAIN_ATTACK_RADIUS   = 3;
 const TERRAIN_DAMAGE = 25;
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
 const wss = new WebSocketServer({ port: PORT });
-// Map of connected players: id → { input, state, color, score }
+// Map of connected players: id → { input, state, color }
 const players = new Map();
-// Map of scores mirror: id → integer
-const scores = new Map();
 // Array of active boomerang projectiles
 const projectiles = [];
 // Running ID for each new shot
@@ -60,11 +58,11 @@ function pickNamedColour() {
 function packSnapshot() {
   return JSON.stringify({
     t: 'snapshot',
-    // players: id → { x,y,z,yaw,pitch,flyMode,color,score }
+    // players: id → { x,y,z,yaw,pitch,flyMode,color }
     players: Object.fromEntries(
       [...players.entries()].map(([id,p]) => [
         id,
-        { ...p.state, color: p.color, score: p.score || 0, health: p.health }
+        { ...p.state, color: p.color, health: p.health }
       ])
     ),
     // array of projectile records
@@ -105,7 +103,12 @@ function terrainAttack(){
     }
   }
 }
-setInterval(terrainAttack, TERRAIN_ATTACK_INTERVAL);
+function scheduleTerrainAttack(){
+  terrainAttack();
+  const delay = TERRAIN_ATTACK_INTERVAL + Math.random()*TERRAIN_ATTACK_INTERVAL;
+  setTimeout(scheduleTerrainAttack, delay);
+}
+setTimeout(scheduleTerrainAttack, TERRAIN_ATTACK_INTERVAL);
 
 /* ─────────────── CLIENT CONNECTION ───────────────────── */
 // Handle new WebSocket connections
@@ -114,9 +117,8 @@ wss.on('connection', ws => {
   const id    = uuid();
   const color = pickNamedColour();
 
-  // Initialize player state + score
-  players.set(id, { input:{}, state:{}, color, score: 0, health: MAX_HEALTH });
-  scores.set(id, 0);
+  // Initialize player state
+  players.set(id, { input:{}, state:{}, color, health: MAX_HEALTH });
 
   // Send welcome packet with assigned ID, color, and noise seed
   ws.send(JSON.stringify({ t:'welcome', id, color, seed: NOISE_SEED }));
@@ -168,21 +170,8 @@ wss.on('connection', ws => {
       // Client reports hitting the active target
       case 'hitTarget': {
         if (activeTarget && msg.targetId === activeTarget.id) {
-          // Only first hit counts
           const p = players.get(id);
-          p.score = (p.score || 0) + 1;
-          scores.set(id, p.score);
-
-          // Broadcast full scoreboard to all clients
-          const scoreMsg = JSON.stringify({
-            t: 'scoreUpdate',
-            scores: Object.fromEntries(scores)
-          });
-          wss.clients.forEach(c =>
-            c.readyState===1 && c.send(scoreMsg)
-          );
-
-          // Respawn the next target
+          p.health = Math.min(MAX_HEALTH, p.health + 20);
           activeTarget = null;
           spawnTarget();
         }
@@ -211,16 +200,6 @@ wss.on('connection', ws => {
     const p = players.get(id);
     if (p) usedColors.delete(p.color);
     players.delete(id);
-    scores.delete(id);
-
-    // Broadcast updated scores after removing this player
-    const scoreMsg = JSON.stringify({
-      t: 'scoreUpdate',
-      scores: Object.fromEntries(scores)
-    });
-    wss.clients.forEach(c =>
-      c.readyState===1 && c.send(scoreMsg)
-    );
 
     // Remove any projectiles belonging to them
     for (let i = projectiles.length-1; i>=0; i--) {
