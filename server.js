@@ -89,9 +89,17 @@ setInterval(spawnTarget, 30000);
 function terrainAttack(){
   if(players.size===0) return;
   const spikes=[];
+  const playerArr = [...players.values()];
   for(let i=0;i<NUM_SPIKES_PER_ATTACK;i++){
-    const x=(Math.random()*2-1)*TERRAIN_HALF;
-    const z=(Math.random()*2-1)*TERRAIN_HALF;
+    let x,z;
+    if(playerArr.length>0 && Math.random()<0.5){
+      const p = playerArr[Math.random()*playerArr.length|0];
+      x = p.state.x || 0;
+      z = p.state.z || 0;
+    }else{
+      x=(Math.random()*2-1)*TERRAIN_HALF;
+      z=(Math.random()*2-1)*TERRAIN_HALF;
+    }
     const h=2+Math.random()*6;
     spikes.push({x,z,h});
     const msg=JSON.stringify({
