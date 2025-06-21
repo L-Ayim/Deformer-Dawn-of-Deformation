@@ -29,8 +29,8 @@ want to trade visual quality for higher frame rates.
 
 - Press the shoot button again to recall your boomerang early if it's already flying.
 - Hitting a floor target now restores a small amount of health instead of awarding score.
-- Terrain spikes now occur roughly five random strikes per minute
-  with a targeted wave about once per minute.
-- Spikes erupt from the ground before dealing damage so alert players can dodge.
+- Terrain spikes are disabled by default. To re-enable them,
+  set `TERRAIN_ATTACKS_ENABLED` to `true` in `server.js`.
+- Spikes would normally erupt from the ground before dealing damage so alert players can dodge.
 - Characters briefly flash red when hurt so you can tell a hit landed.
 - Boomerang shots now register hits when striking any limb, not just the torso.
