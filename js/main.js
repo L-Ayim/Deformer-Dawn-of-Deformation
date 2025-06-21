@@ -28,10 +28,14 @@ window.onload = () => {
       move.b = y < -0.3 ? 1 : 0;
       move.l = x < -0.3 ? 1 : 0;
       move.r = x >  0.3 ? 1 : 0;
+      autoSprint = (y > 0.85 && Math.abs(x) < 0.3);
+      shiftHeld = manualSprint || autoSprint;
     });
 
     joystick.on('end', () => {
       move.f = move.b = move.l = move.r = 0;
+      autoSprint = false;
+      shiftHeld = manualSprint || autoSprint;
     });
 
     // ─── Screen Drag Look ───────────────
@@ -129,8 +133,14 @@ window.onload = () => {
 
     // ─── Sprint Button ───────────────────
     const sprintBtn = document.getElementById('sprint-button');
-    const onSprintStart = () => { shiftHeld = true; };
-    const onSprintEnd   = () => { shiftHeld = false; };
+    const onSprintStart = () => {
+      manualSprint = true;
+      shiftHeld = manualSprint || autoSprint;
+    };
+    const onSprintEnd   = () => {
+      manualSprint = false;
+      shiftHeld = manualSprint || autoSprint;
+    };
     sprintBtn.addEventListener('touchstart', e => { e.preventDefault(); onSprintStart(); });
     sprintBtn.addEventListener('touchend',   e => { e.preventDefault(); onSprintEnd(); });
     sprintBtn.addEventListener('touchcancel', onSprintEnd);
@@ -189,7 +199,8 @@ let   terrain, noise;
 let   yaw = 0, pitch = 0;
 let   charging = false, chargeStart = 0, currentCharge = 0;
 let   vertVel = 0, onGround = false, flyMode = false;
-let   spaceHeld = false, zHeld  = false, shiftHeld = false;
+let   spaceHeld = false, zHeld  = false;
+let   manualSprint = false, autoSprint = false, shiftHeld = false;
 let   lastSpace = 0, lastZ = 0;
 const move = { f:0, b:0, l:0, r:0 };
 
@@ -695,7 +706,10 @@ document.addEventListener('keydown',e=>{
   switch(e.code){
     case'KeyW':move.f=1;break; case'KeyS':move.b=1;break;
     case'KeyA':move.l=1;break; case'KeyD':move.r=1;break;
-    case'ShiftLeft':case'ShiftRight':shiftHeld=true;break;
+    case'ShiftLeft':case'ShiftRight':
+      manualSprint = true;
+      shiftHeld = manualSprint || autoSprint;
+      break;
     case'Space':
       spaceHeld=true;
       if(now-lastSpace<300) flyMode=!flyMode;
@@ -712,7 +726,10 @@ document.addEventListener('keyup',e=>{
   switch(e.code){
     case'KeyW':move.f=0;break; case'KeyS':move.b=0;break;
     case'KeyA':move.l=0;break; case'KeyD':move.r=0;break;
-    case'ShiftLeft':case'ShiftRight':shiftHeld=false;break;
+    case'ShiftLeft':case'ShiftRight':
+      manualSprint = false;
+      shiftHeld = manualSprint || autoSprint;
+      break;
     case'Space':spaceHeld=false;break;
     case'KeyZ':case'KeyZ':zHeld =false;break;
   }
