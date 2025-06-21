@@ -354,8 +354,13 @@ socket.addEventListener('message', e => {
 
     case 'playerDied': {
       if (msg.id === myId) {
-        teleport();
+        teleport(msg.x, msg.z);
       } else {
+        const av = ghosts.get(msg.id);
+        if(av && msg.x!==undefined && msg.z!==undefined){
+          const y = meshHeightAt(msg.x,msg.z)+1;
+          av.position.set(msg.x,y,msg.z);
+        }
         const mesh = playerPathMeshes.get(msg.id);
         if (mesh) {
           scene.remove(mesh);
@@ -594,8 +599,11 @@ function recallProjectile(){
     if(p.id===undefined) p.returning = true;
   }
 }
-function teleport(){
-  const x=(Math.random()-0.5)*GRID*SPAN, z=(Math.random()-0.5)*GRID*SPAN;
+function teleport(x=null,z=null){
+  if(x===null||z===null){
+    x=(Math.random()-0.5)*GRID*SPAN;
+    z=(Math.random()-0.5)*GRID*SPAN;
+  }
   const y=meshHeightAt(x,z)+1;
   character.position.set(x,y,z);
   vertVel=0; onGround=true;
@@ -1245,9 +1253,18 @@ function updateScoreboard(snapshotPlayers){
     deaths:p.deaths||0,
     team:p.team||null
   })).sort((a,b)=>b.kills-a.kills);
-  scoreboardEl.innerHTML = entries.map(e =>
-    `<div style="color:${e.color}">${e.color}: ${e.kills}/${e.deaths}</div>`
+  const rows = entries.map(e =>
+    `<tr style="color:${e.color}">`+
+      `<td class="name">${e.color}</td>`+
+      `<td class="kills">${e.kills}</td>`+
+      `<td class="deaths">${e.deaths}</td>`+
+    `</tr>`
   ).join('');
+  scoreboardEl.innerHTML =
+    `<table>`+
+      `<tr><th>Player</th><th>K</th><th>D</th></tr>`+
+      rows+
+    `</table>`;
 }
 
 function spawnTerrainSpike(x,z,r,delay,height=1){

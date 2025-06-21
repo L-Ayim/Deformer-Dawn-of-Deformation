@@ -175,5 +175,20 @@ canvas {
   font-size: 14px;
   color: white;
   z-index: 20;
+  border-radius: 4px;
+}
+
+#scoreboard table {
+  border-collapse: collapse;
+}
+
+#scoreboard th,
+#scoreboard td {
+  padding: 2px 6px;
+}
+
+#scoreboard th {
+  text-align: left;
+  border-bottom: 1px solid #fff;
 }
 
