@@ -145,10 +145,12 @@ const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
 const NOISE_SCALE     = 0.004, NOISE_AMP = 30, NOISE_OCTS = 6;
 const TEXTURE_SIZE    = 256;               // resolution of procedural texture
 const PIXEL_RATIO_CAP = 0.75;              // clamp resolution for perf
-const USE_ANTIALIAS   = false;             // disable AA to ease GPU load
+const USE_ANTIALIAS   = true;              // enable antialiasing
 const MAX_DT          = 0.05;
 const MAX_HEALTH      = 100;
 const SPIKE_LIFE      = 0.3;               // seconds spike remains visible
+const HIT_PULL_RADIUS = 2.0;               // range for projectile attraction
+const HIT_PULL_FACTOR = 0.15;              // how strongly velocity bends
 const mapSeed         = '🌎';                 // constant → identical terrain
 const noiseSky        = new SimplexNoise(mapSeed + 'sky');
 
@@ -778,6 +780,8 @@ function animate(now){
     const step=p.velocity.clone().multiplyScalar(dt);
     p.mesh.position.add(step); p.travelled+=step.length();
 
+    applyHitPull(p, dt);
+
     const groundY=meshHeightAt(p.mesh.position.x,p.mesh.position.z);
     const hitGround=p.mesh.position.y<=groundY;
 
@@ -1109,6 +1113,36 @@ function avatarHitTest(av,pos){
     if(p.distanceTo(pos)<=r) return true;
   }
   return false;
+}
+
+function applyHitPull(p, dt){
+  const pos = p.mesh.position;
+  let closest = null;
+  let minDist = HIT_PULL_RADIUS;
+  const test = target => {
+    const d = pos.distanceTo(target);
+    if(d < minDist){ closest = target; minDist = d; }
+  };
+
+  if(p.owner===myId){
+    ghosts.forEach(av=>{
+      av.userData.head.getWorldPosition(tmpVec);
+      test(tmpVec.clone());
+      av.userData.body.getWorldPosition(tmpVec);
+      test(tmpVec.clone());
+    });
+    if(activeTarget && targetMesh){
+      test(targetMesh.position);
+    }
+  } else {
+    if(headMesh){ headMesh.getWorldPosition(tmpVec); test(tmpVec.clone()); }
+    if(bodyMesh){ bodyMesh.getWorldPosition(tmpVec); test(tmpVec.clone()); }
+  }
+
+  if(closest){
+    const desired = closest.clone().sub(pos).normalize().multiplyScalar(p.velocity.length());
+    p.velocity.lerp(desired, HIT_PULL_FACTOR);
+  }
 }
 
 /* ─────────────────────────── HELPERS ─────────────────────────────── */
