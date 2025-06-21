@@ -13,11 +13,8 @@ Textures now use the maximum supported anisotropy value for crisper detail at gl
   immediately tell which way to head. The ribbon tapers from thick near you to
   thin at the target, removing the need for extra arrow markers.
 
-### Baked Terrain Tiles
+### Procedural Terrain
 
-Run `./bake_tiles.py --min -1 -1 --max 1 1 --out tiles` to generate OBJ
-files for tiles within the given coordinate range. Start the HTTP server
-with `./tile_server.js` and your client can fetch `chunk_x_z.obj` files on
-demand.
-
-Alternatively, run `start-sig.ps1` to automatically bake the tiles and start all servers.
+The terrain is now generated on the client using Simplex noise so no tile
+server or baking step is required. Simply start the web and WebSocket servers
+with `npm start` and connect.
