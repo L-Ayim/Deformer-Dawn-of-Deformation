@@ -28,6 +28,13 @@ export function loadHeightmap(mapSeed, onReady) {
     noise = new SimplexNoise(mapSeed);
     if (onReady) onReady();
   };
+  hmImg.onerror = () => {
+    console.warn('Failed to load heightmap.png. Using flat fallback heightmap.');
+    mapW = mapH = 1;
+    mapData = new Float32Array([0]);
+    noise = new SimplexNoise(mapSeed);
+    if (onReady) onReady();
+  };
 }
 
 function getHeight(u,v){
