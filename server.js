@@ -19,7 +19,7 @@ const TARGET_RADIUS = 5;
 const MAX_HEALTH    = 100;
 const PROJECTILE_DAMAGE = 25;
 // Base delay between terrain attacks (ms). Increased to lighten load
-const TERRAIN_ATTACK_INTERVAL = 6000;
+const TERRAIN_ATTACK_INTERVAL = 10000;
 const TERRAIN_ATTACK_RADIUS   = 3;
 const TERRAIN_SPIKE_DELAY     = 1000; // ms delay before damage applies
 const TERRAIN_DAMAGE = 25;

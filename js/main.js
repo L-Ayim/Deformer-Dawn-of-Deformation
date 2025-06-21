@@ -783,9 +783,7 @@ function animate(now){
     if(p.owner===myId){
       ghosts.forEach((av,id)=>{
         if(hitPlayer) return;
-        const center = av.position.clone().add({x:0,y:1.5,z:0});
-        const d = p.mesh.position.distanceTo(center);
-        if(d < 1.5){
+        if(avatarHitTest(av,p.mesh.position)){
           socket.send(JSON.stringify({t:'hitPlayer', target:id, shotId:p.id}));
           flashMaterial(av.userData.mat);
           spawnHitEffect(av.position.clone());
@@ -1094,6 +1092,21 @@ function flashMaterial(mat){
   }
   damageTimers.set(mat,0.2);
   mat.emissive.set(0xff0000);
+}
+
+function avatarHitTest(av,pos){
+  const parts=[
+    [av.userData.head,0.7],
+    [av.userData.body,1.0],
+    [av.userData.Larm,0.4],[av.userData.Rarm,0.4],
+    [av.userData.Lleg,0.5],[av.userData.Rleg,0.5]
+  ];
+  const p=new THREE.Vector3();
+  for(const [mesh,r] of parts){
+    mesh.getWorldPosition(p);
+    if(p.distanceTo(pos)<=r) return true;
+  }
+  return false;
 }
 
 /* ─────────────────────────── HELPERS ─────────────────────────────── */
