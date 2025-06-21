@@ -506,7 +506,13 @@ function makeRemoteAvatar(col){
       scores.set(id, 0);
     }
   });
-  // Now update the DOM
+
+  for (const id of [...scores.keys()]) {
+    if (!(id in pack)) {
+      scores.delete(id);
+    }
+  }
+
   updateScoreboard();
  
   /* ---------- players ---------- */
