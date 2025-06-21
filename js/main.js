@@ -1245,9 +1245,18 @@ function updateScoreboard(snapshotPlayers){
     deaths:p.deaths||0,
     team:p.team||null
   })).sort((a,b)=>b.kills-a.kills);
-  scoreboardEl.innerHTML = entries.map(e =>
-    `<div style="color:${e.color}">${e.color}: ${e.kills}/${e.deaths}</div>`
+  const rows = entries.map(e =>
+    `<tr style="color:${e.color}">`+
+      `<td class="name">${e.color}</td>`+
+      `<td class="kills">${e.kills}</td>`+
+      `<td class="deaths">${e.deaths}</td>`+
+    `</tr>`
   ).join('');
+  scoreboardEl.innerHTML =
+    `<table>`+
+      `<tr><th>Player</th><th>K</th><th>D</th></tr>`+
+      rows+
+    `</table>`;
 }
 
 function spawnTerrainSpike(x,z,r,delay,height=1){
