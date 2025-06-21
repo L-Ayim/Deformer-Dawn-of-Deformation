@@ -150,7 +150,9 @@ const CHARGE_TIME_MAX = 1.5,  MIN_SCALE = 1, MAX_SCALE = 3;
 const MIN_SPEED_OUT   = SPEED_OUT,  MAX_SPEED_OUT = SPEED_OUT * 2;
 const MIN_RANGE_OUT   = MAX_OUT_RANGE, MAX_RANGE_OUT = MAX_OUT_RANGE * 2;
 const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
-const NOISE_SCALE     = 0.002, NOISE_AMP = 8, NOISE_OCTS = 2;
+const NOISE_SCALE     = 0.002, NOISE_AMP = 8, NOISE_OCTS = 5;
+const COLOR_FREQ      = 0.1;               // noise frequency for vertex colors
+const TEXTURE_SIZE    = 256;               // resolution of procedural texture
 const MAX_DT          = 0.05;
 const mapSeed         = '🌎';                 // constant → identical terrain
 
@@ -341,34 +343,60 @@ function sampleHybridNormal(u,v){
   const hD=getNoise(u,v-e), hU=getNoise(u,v+e);
   return new THREE.Vector3(hL-hR,2*e,hD-hU).normalize();
 }
+
+function generateNoiseTexture(size){
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
+      const n = (noise.noise2D(x/size*4, y/size*4)+1)/2;
+      const c = Math.floor(n*255);
+      const idx = (y*size+x)*4;
+      img.data[idx] = img.data[idx+1] = img.data[idx+2] = c;
+      img.data[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4,4);
+  return tex;
+}
 function initTerrain(){
   return new Promise(res => {
-  const textureLoader = new THREE.TextureLoader();
-  const diffuseMap = textureLoader.load('assets/ruggeddiffused.png');
-  const overlayMap = textureLoader.load('assets/ruggedpeaks.jpg');
+  const diffuseMap = generateNoiseTexture(TEXTURE_SIZE);
+  const overlayMap = generateNoiseTexture(TEXTURE_SIZE);
   const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
   diffuseMap.anisotropy = maxAnisotropy;
   overlayMap.anisotropy = maxAnisotropy;
-  overlayMap.wrapS = overlayMap.wrapT = THREE.RepeatWrapping;
-  overlayMap.repeat.set(1,1);
 
   const mat = new THREE.MeshStandardMaterial({
     map: diffuseMap,
     aoMap: overlayMap,
     aoMapIntensity: 1.5,
     metalness: 0.1,
-    roughness: 0.9
+    roughness: 0.9,
+    vertexColors: true
   });
   const geo = new THREE.PlaneGeometry(GRID*SPAN, GRID*SPAN, GRID, GRID);
   geo.rotateX(-Math.PI/2);
   const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count*3);
+  const color = new THREE.Color();
   for (let i=0; i<pos.count; i++){
     const x = pos.getX(i) + HALF;
     const z = pos.getZ(i) + HALF;
     const y = getNoise(x/SPAN, z/SPAN);
     pos.setY(i, y);
+    const n = noise.noise2D(x*COLOR_FREQ, z*COLOR_FREQ);
+    const hNorm = (y + NOISE_AMP) / (NOISE_AMP*2);
+    color.setHSL(0.3 - hNorm*0.25 + n*0.05, 0.6, 0.3 + hNorm*0.5);
+    colors[i*3] = color.r; colors[i*3+1] = color.g; colors[i*3+2] = color.b;
   }
   pos.needsUpdate = true;
+  geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
   geo.computeVertexNormals();
   terrain = new THREE.Mesh(geo, mat);
   scene.add(terrain);
@@ -377,6 +405,8 @@ function initTerrain(){
 }
 function deformTerrain(impact,radius,depth){
   const pos=terrain.geometry.attributes.position;
+  const col=terrain.geometry.attributes.color;
+  const tmpColor=new THREE.Color();
   for(let i=0;i<pos.count;i++){
     const dx=pos.getX(i)-impact.x, dz=pos.getZ(i)-impact.z;
     const dist=Math.hypot(dx,dz);
@@ -384,8 +414,16 @@ function deformTerrain(impact,radius,depth){
       const falloff = 1-dist/radius;
       pos.setY(i,pos.getY(i)-falloff*depth);
     }
+    const x=pos.getX(i)+HALF;
+    const z=pos.getZ(i)+HALF;
+    const y=pos.getY(i);
+    const n=noise.noise2D(x*COLOR_FREQ,z*COLOR_FREQ);
+    const hNorm=(y+NOISE_AMP)/(NOISE_AMP*2);
+    tmpColor.setHSL(0.3 - hNorm*0.25 + n*0.05,0.6,0.3 + hNorm*0.5);
+    col.setXYZ(i,tmpColor.r,tmpColor.g,tmpColor.b);
   }
   pos.needsUpdate=true;
+  col.needsUpdate=true;
   terrain.geometry.computeVertexNormals();
 }
 function meshHeightAt(x,z){
