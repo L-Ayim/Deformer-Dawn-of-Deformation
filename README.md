@@ -25,7 +25,7 @@ want to trade visual quality for higher frame rates.
 ### Gameplay
 
 - Press the shoot button again to recall your boomerang early if it's already flying.
-- Hitting a floor target now restores a small amount of health instead of awarding score.
+- Hitting a floor target now restores a small amount of health instead of awarding score. Targets appear as colored discs on the ground.
 - Terrain spikes are disabled by default. To re-enable them,
   set `TERRAIN_ATTACKS_ENABLED` to `true` in `server.js`.
 - Spikes would normally erupt from the ground before dealing damage so alert players can dodge.

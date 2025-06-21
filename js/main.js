@@ -589,11 +589,12 @@ function makeRemoteAvatar(col){
         const color = pu.type==='health'?0xffff00:
                       pu.type==='double'?0x00ffff:
                       pu.type==='shield'?0x00ff00:0xff00ff;
-        const geom=new THREE.CylinderGeometry(0.5,0.5,3,8);
-        const mat=new THREE.MeshStandardMaterial({color});
-        const mesh=new THREE.Mesh(geom,mat);
-        const h=meshHeightAt(pu.x,pu.z);
-        mesh.position.set(pu.x,h+1.5,pu.z);
+        const geom = new THREE.CircleGeometry(0.75, 16);
+        const mat  = new THREE.MeshBasicMaterial({ color, side:THREE.DoubleSide });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.rotation.x = -Math.PI/2;
+        const h = meshHeightAt(pu.x, pu.z);
+        mesh.position.set(pu.x, h + 0.05, pu.z);
         scene.add(mesh); powerupMeshes.set(pu.id,mesh);
       }
     });
