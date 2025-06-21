@@ -224,8 +224,8 @@ renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
   if (isMobile) setupMobileControls();
 
-/* GPS path line */
-let pathLine = null;
+/* GPS path mesh */
+let pathMesh = null;
 
 /* simple “idle controls” overlay fade */
 const infoEl     = document.getElementById('info');
@@ -296,9 +296,13 @@ case 'scoreUpdate': {
     targetMesh     = new THREE.Mesh(geom, mat);
     targetMesh.position.set(activeTarget.x, height + 1.5, activeTarget.z);
     scene.add(targetMesh);
-    if (pathLine) {
-      pathLine.visible = true;
+    if (pathMesh) {
+      scene.remove(pathMesh);
+      pathMesh.geometry.dispose();
+      pathMesh.material.dispose();
+      pathMesh = null;
     }
+    updatePathMesh();
     break;
     }
 
@@ -722,6 +726,12 @@ function animate(now){
         }));
         // clear locally so we only send once
         activeTarget = null;
+        if (pathMesh) {
+          scene.remove(pathMesh);
+          pathMesh.geometry.dispose();
+          pathMesh.material.dispose();
+          pathMesh = null;
+        }
       }
     }
 
@@ -831,22 +841,8 @@ function animate(now){
   renderer.render(scene,camera);
 
   /* GPS path */
-  if (activeTarget) {
-    const from = character.position.clone();
-    const toY = targetMesh ? targetMesh.position.y
-                           : meshHeightAt(activeTarget.x, activeTarget.z) + 2;
-    const to   = new THREE.Vector3(activeTarget.x, toY, activeTarget.z);
-    if (!pathLine) {
-      const geo = new THREE.BufferGeometry().setFromPoints([from, to]);
-      const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
-      pathLine = new THREE.Line(geo, mat);
-      scene.add(pathLine);
-    } else {
-      pathLine.geometry.setFromPoints([from, to]);
-      pathLine.visible = true;
-    }
-  } else if (pathLine) {
-    pathLine.visible = false;
+  if (activeTarget && !pathMesh) {
+    updatePathMesh();
   }
 
 }
@@ -855,6 +851,62 @@ window.addEventListener('resize',()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 });
+
+function createPathStrip(from, to, width = 1, segments = 60) {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const nx = -dz / len, nz = dx / len;
+
+  const pos = new Float32Array((segments * 2 + 2) * 3);
+  const idx = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const x = THREE.MathUtils.lerp(from.x, to.x, t);
+    const z = THREE.MathUtils.lerp(from.z, to.z, t);
+    const y = meshHeightAt(x, z) + 0.05;
+    const offX = nx * width * 0.5;
+    const offZ = nz * width * 0.5;
+
+    const vi = i * 6;
+    pos[vi]     = x + offX;
+    pos[vi + 1] = y;
+    pos[vi + 2] = z + offZ;
+    pos[vi + 3] = x - offX;
+    pos[vi + 4] = y;
+    pos[vi + 5] = z - offZ;
+    if (i < segments) {
+      const a = i * 2;
+      const b = i * 2 + 1;
+      const c = i * 2 + 2;
+      const d = i * 2 + 3;
+      idx.push(a, b, d, a, d, c);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+function updatePathMesh() {
+  if (!activeTarget || !terrain || !character) return;
+  const start = character.position.clone();
+  const endY = meshHeightAt(activeTarget.x, activeTarget.z) + 0.05;
+  const end = new THREE.Vector3(activeTarget.x, endY, activeTarget.z);
+  const geo = createPathStrip(start, end, 1, 80);
+  if (pathMesh) {
+    scene.remove(pathMesh);
+    pathMesh.geometry.dispose();
+    pathMesh.material.dispose();
+  }
+  pathMesh = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide })
+  );
+  scene.add(pathMesh);
+}
 
 /* ─────────────────────────── HELPERS ─────────────────────────────── */
 function catchBoomerang(p){
