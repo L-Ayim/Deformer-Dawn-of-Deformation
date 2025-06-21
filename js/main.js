@@ -1075,8 +1075,28 @@ function createPathStrip(from, to, startWidth = 1, endWidth = 0.5,
 
 function updatePlayerPathMeshes() {
   if (!terrain || !character || !bodyMesh) return;
+  if (spectator || myLives <= 0) {
+    playerPathMeshes.forEach(mesh => {
+      scene.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    });
+    playerPathMeshes.clear();
+    return;
+  }
   ghosts.forEach((av, id) => {
     if (!av.visible) {
+      const old = playerPathMeshes.get(id);
+      if (old) {
+        scene.remove(old);
+        old.geometry.dispose();
+        old.material.dispose();
+        playerPathMeshes.delete(id);
+      }
+      return;
+    }
+
+    if (av.userData.lives !== undefined && av.userData.lives <= 0) {
       const old = playerPathMeshes.get(id);
       if (old) {
         scene.remove(old);
