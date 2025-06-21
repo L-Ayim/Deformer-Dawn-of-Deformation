@@ -328,6 +328,9 @@ function initTerrain(){
   const diffuseMap = textureLoader.load('assets/ruggeddiffused.png');
 
   const overlayMap = textureLoader.load('assets/ruggedpeaks.jpg');
+  const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+  diffuseMap.anisotropy = maxAnisotropy;
+  overlayMap.anisotropy = maxAnisotropy;
   overlayMap.wrapS = overlayMap.wrapT = THREE.RepeatWrapping;
   overlayMap.repeat.set(GRID * SPAN / 256, GRID * SPAN / 256);
   geo.setAttribute('uv2', new THREE.BufferAttribute(geo.attributes.uv.array, 2));
