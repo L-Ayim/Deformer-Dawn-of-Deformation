@@ -161,7 +161,6 @@ const MIN_SPEED_OUT   = SPEED_OUT,  MAX_SPEED_OUT = SPEED_OUT * 2;
 const MIN_RANGE_OUT   = MAX_OUT_RANGE, MAX_RANGE_OUT = MAX_OUT_RANGE * 2;
 const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
 const NOISE_SCALE     = 0.004, NOISE_AMP = 30, NOISE_OCTS = 6;
-const COLOR_FREQ      = 0.1;               // noise frequency for vertex colors
 const TEXTURE_SIZE    = 256;               // resolution of procedural texture
 const MAX_DT          = 0.05;
 const mapSeed         = '🌎';                 // constant → identical terrain
@@ -402,32 +401,22 @@ function generateNoiseTexture(size){
 }
 function initTerrain(){
   return new Promise(res => {
-  // Use a simple material without external textures
+  // Use a simple material without external textures or vertex colors
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x222222,
+    color: 0x556B2F,
     metalness: 0.1,
-    roughness: 0.9,
-    vertexColors: true
+    roughness: 0.9
   });
   const geo = new THREE.PlaneGeometry(GRID*SPAN, GRID*SPAN, GRID, GRID);
   geo.rotateX(-Math.PI/2);
   const pos = geo.attributes.position;
-  const colors = new Float32Array(pos.count*3);
-  const color = new THREE.Color();
   for (let i=0; i<pos.count; i++){
     const x = pos.getX(i) + HALF;
     const z = pos.getZ(i) + HALF;
     const y = getNoise(x/SPAN, z/SPAN);
     pos.setY(i, y);
-    const n1 = noise.noise2D(x*COLOR_FREQ, z*COLOR_FREQ);
-    const n2 = noise.noise2D((x+1000)*COLOR_FREQ*1.3, (z+1000)*COLOR_FREQ*1.3);
-    const hNorm = (y + NOISE_AMP) / (NOISE_AMP*2);
-    const hue = ((n1+n2)*0.25+0.5)%1;
-    color.setHSL(hue, 0.7, 0.4 + hNorm*0.4);
-    colors[i*3] = color.r; colors[i*3+1] = color.g; colors[i*3+2] = color.b;
   }
   pos.needsUpdate = true;
-  geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
   geo.computeVertexNormals();
   terrain = new THREE.Mesh(geo, mat);
   scene.add(terrain);
@@ -436,8 +425,6 @@ function initTerrain(){
 }
 function deformTerrain(impact,radius,depth){
   const pos=terrain.geometry.attributes.position;
-  const col=terrain.geometry.attributes.color;
-  const tmpColor=new THREE.Color();
   for(let i=0;i<pos.count;i++){
     const dx=pos.getX(i)-impact.x, dz=pos.getZ(i)-impact.z;
     const dist=Math.hypot(dx,dz);
@@ -445,18 +432,8 @@ function deformTerrain(impact,radius,depth){
       const falloff = 1-dist/radius;
       pos.setY(i,pos.getY(i)-falloff*depth);
     }
-    const x=pos.getX(i)+HALF;
-    const z=pos.getZ(i)+HALF;
-    const y=pos.getY(i);
-    const n1=noise.noise2D(x*COLOR_FREQ,z*COLOR_FREQ);
-    const n2=noise.noise2D((x+1000)*COLOR_FREQ*1.3,(z+1000)*COLOR_FREQ*1.3);
-    const hNorm=(y+NOISE_AMP)/(NOISE_AMP*2);
-    const hue=((n1+n2)*0.25+0.5)%1;
-    tmpColor.setHSL(hue,0.7,0.4 + hNorm*0.4);
-    col.setXYZ(i,tmpColor.r,tmpColor.g,tmpColor.b);
   }
   pos.needsUpdate=true;
-  col.needsUpdate=true;
   terrain.geometry.computeVertexNormals();
 }
 function meshHeightAt(x,z){
