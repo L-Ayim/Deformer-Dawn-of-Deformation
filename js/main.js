@@ -224,8 +224,8 @@ renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
   if (isMobile) setupMobileControls();
 
-/* HUD arrow */
-const arrowEl = document.getElementById('target-arrow');
+/* GPS path line */
+let pathLine = null;
 
 /* simple “idle controls” overlay fade */
 const infoEl     = document.getElementById('info');
@@ -279,8 +279,8 @@ case 'scoreUpdate': {
       applySnapshot(msg);
       break;
     case 'newTarget': {
-      // server just spawned one
-      activeTarget = msg.target;            // { id, x, z }
+    // server just spawned one
+    activeTarget = msg.target;            // { id, x, z }
 
       // remove any old marker
       if (targetMesh) {
@@ -296,6 +296,9 @@ case 'scoreUpdate': {
     targetMesh     = new THREE.Mesh(geom, mat);
     targetMesh.position.set(activeTarget.x, height + 1.5, activeTarget.z);
     scene.add(targetMesh);
+    if (pathLine) {
+      pathLine.visible = true;
+    }
     break;
     }
 
@@ -827,18 +830,23 @@ function animate(now){
 
   renderer.render(scene,camera);
 
-  /* guide arrow */
+  /* GPS path */
   if (activeTarget) {
-    const dx = activeTarget.x - character.position.x;
-    const dz = activeTarget.z - character.position.z;
-    const dy = (targetMesh ? targetMesh.position.y : 0) - character.position.y;
-    const ang = Math.atan2(dx, dz) - yaw;
-    const vertAng = Math.atan2(dy, Math.hypot(dx, dz)) - pitch;
-    arrowEl.style.display = 'block';
-    arrowEl.style.transform =
-        `translateX(-50%) rotateZ(${ang}rad) rotateX(${vertAng}rad)`;
-  } else {
-    arrowEl.style.display = 'none';
+    const from = character.position.clone();
+    const toY = targetMesh ? targetMesh.position.y
+                           : meshHeightAt(activeTarget.x, activeTarget.z) + 2;
+    const to   = new THREE.Vector3(activeTarget.x, toY, activeTarget.z);
+    if (!pathLine) {
+      const geo = new THREE.BufferGeometry().setFromPoints([from, to]);
+      const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
+      pathLine = new THREE.Line(geo, mat);
+      scene.add(pathLine);
+    } else {
+      pathLine.geometry.setFromPoints([from, to]);
+      pathLine.visible = true;
+    }
+  } else if (pathLine) {
+    pathLine.visible = false;
   }
 
 }

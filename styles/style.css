@@ -37,43 +37,6 @@ canvas {
   opacity: 1 !important;
 }
 
-/* Arrow guiding to target */
-#target-arrow {
-  position: absolute;
-  top: 50px;
-  left: 50%;
-  width: 16px;
-  height: 24px;
-  transform: translateX(-50%) rotate(0deg);
-  transform-origin: 50% 100%;
-  transform-style: preserve-3d;
-  perspective: 800px;
-  pointer-events: none;
-  z-index: 110;
-  display: none;
-}
-#target-arrow::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 4px;
-  height: 14px;
-  background: yellow;
-  transform: translateX(-50%);
-}
-#target-arrow::after {
-  content: '';
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-bottom: 10px solid yellow;
-  transform: translateX(-50%);
-}
 
 /* Leaderboard styling */
 #leaderboard {
