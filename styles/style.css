@@ -129,7 +129,5 @@ canvas {
   line-height: 55px;
   z-index: 11;
 }
-#ascend-button { bottom: 100px; }
-#descend-button { bottom: 165px; }
 #fly-toggle-button { bottom: 230px; }
 
