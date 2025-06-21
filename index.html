@@ -13,27 +13,7 @@
 </head>
 <body>
 
-  <div id="info">
-    <strong>Controls:</strong>
-    <span id="controls-desktop">
-      W/A/S/D → Move<br>
-      Mouse → Look<br>
-      Shift → Sprint<br>
-      Space ↔ Fly Mode<br>
-      Ctrl → Descend<br>
-      LMB → Shoot / Recall<br>
-      Esc → Reset
-    </span>
-    <span id="controls-mobile" style="display: none;">
-      Joystick (left) → Move<br>
-      Drag screen → Look<br>
-      Red Button → Shoot / Recall<br>
-      Tap top or ▲ ↔ Jump / Ascend<br>
-      Tap bottom or ▼ ↔ Descend<br>
-      Fly Btn ↔ Fly / Walk<br>
-      ⛶ → Fullscreen
-    </span>
-  </div>
+
 
 
   <button id="fullscreen-btn">⛶</button>
@@ -46,31 +26,17 @@
 
   <!-- Three.js & Noise libs are imported by js/main.js -->
 
-  <!-- Mobile UI behavior (joystick, fullscreen hints, fly/jump) -->
+  <!-- Mobile UI behavior (joystick and fullscreen) -->
   <script>
     const isMobile      = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const infoPanel     = document.getElementById('info');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
-    let idleTimeout;
-
-    function resetIdleTimer() {
-      infoPanel.classList.remove('visible');
-      fullscreenBtn.classList.remove('visible');
-      clearTimeout(idleTimeout);
-      idleTimeout = setTimeout(() => {
-        infoPanel.classList.add('visible');
-        fullscreenBtn.classList.add('visible');
-      }, 3000);
-    }
 
     window.addEventListener('DOMContentLoaded', () => {
       if (!isMobile) return;
 
-      document.getElementById('controls-desktop').style.display   = 'none';
-      document.getElementById('controls-mobile').style.display    = 'inline';
-      document.getElementById('joystick-zone').style.display      = 'block';
-      document.getElementById('shoot-button').style.display       = 'block';
-      fullscreenBtn.style.display                                 = 'block';
+      document.getElementById('joystick-zone').style.display = 'block';
+      document.getElementById('shoot-button').style.display  = 'block';
+      fullscreenBtn.style.display                             = 'block';
 
       fullscreenBtn.addEventListener('click', () => {
         const el = document.documentElement;
@@ -80,10 +46,6 @@
           document.exitFullscreen?.() || document.webkitExitFullscreen?.();
         }
       });
-
-      document.addEventListener('touchstart', resetIdleTimer, { passive: true });
-      document.addEventListener('mousemove', resetIdleTimer, { passive: true });
-      resetIdleTimer();
     });
   </script>
 

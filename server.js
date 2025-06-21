@@ -41,6 +41,7 @@ const POWERUP_COUNTS = {
 const SHIELD_DURATION = 10; // seconds
 const SPEED_DURATION  = 10; // seconds
 const DOUBLE_SHOTS    = 10; // number of double shots
+const START_LIVES     = 5;  // lives per player
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
@@ -87,7 +88,8 @@ function packSnapshot() {
           health: p.health,
           shield: p.shield || 0,
           speed: p.speed || 0,
-          double: p.doubleShots || 0
+          double: p.doubleShots || 0,
+          lives: p.lives
         }
       ])
     ),
@@ -135,8 +137,16 @@ function applySpikeDamage(spikes){
           if(p.shield>0) break;
           p.health=Math.max(0,p.health-TERRAIN_DAMAGE);
           if(p.health<=0){
-            wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id}))); 
-            p.health=MAX_HEALTH;
+            p.lives -= 1;
+            if(p.lives>0){
+              wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerDied',id})));
+              p.health=MAX_HEALTH;
+            } else {
+              wss.clients.forEach(c=>c.readyState===1&&c.send(JSON.stringify({t:'playerOut',id})));
+              usedColors.delete(p.color);
+              players.delete(id);
+              break;
+            }
           }
           break;
         }
@@ -193,7 +203,8 @@ wss.on('connection', ws => {
     health: MAX_HEALTH,
     shield: 0,
     speed: 0,
-    doubleShots: 0
+    doubleShots: 0,
+    lives: START_LIVES
   });
 
   // Send welcome packet with assigned ID, color, and noise seed
@@ -282,9 +293,17 @@ wss.on('connection', ws => {
           const dmg = PROJECTILE_DAMAGE * mult;
           target.health = Math.max(0, target.health - dmg);
           if (target.health <= 0) {
-            wss.clients.forEach(c => c.readyState===1 &&
-              c.send(JSON.stringify({ t:'playerDied', id: msg.target })));
-            target.health = MAX_HEALTH;
+            target.lives -= 1;
+            if (target.lives > 0) {
+              wss.clients.forEach(c => c.readyState===1 &&
+                c.send(JSON.stringify({ t:'playerDied', id: msg.target })));
+              target.health = MAX_HEALTH;
+            } else {
+              wss.clients.forEach(c => c.readyState===1 &&
+                c.send(JSON.stringify({ t:'playerOut', id: msg.target })));
+              usedColors.delete(target.color);
+              players.delete(msg.target);
+            }
           }
         }
         break;
