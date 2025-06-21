@@ -22,3 +22,5 @@ with `npm start` and connect.
 ### Gameplay
 
 - Press the shoot button again to recall your boomerang early if it's already flying.
+- Hitting a floor target now restores a small amount of health instead of awarding score.
+- Random terrain strikes happen more frequently so keep moving!
