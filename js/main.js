@@ -200,6 +200,8 @@ let   spectator   = false;
 function updateHealthBar() {
   const fill = document.getElementById('health-fill');
   if (fill) fill.style.width = `${myHealth}%`;
+  const text = document.getElementById('health-text');
+  if (text) text.textContent = Math.round(myHealth);
 }
 
 function updateLivesDisplay() {

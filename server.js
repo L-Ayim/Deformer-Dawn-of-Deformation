@@ -269,13 +269,13 @@ wss.on('connection', ws => {
               p.health = Math.min(MAX_HEALTH, p.health + 20);
               break;
             case 'double':
-              p.doubleShots = DOUBLE_SHOTS;
+              p.doubleShots = (p.doubleShots || 0) + DOUBLE_SHOTS;
               break;
             case 'shield':
-              p.shield = SHIELD_DURATION;
+              p.shield = (p.shield || 0) + SHIELD_DURATION;
               break;
             case 'speed':
-              p.speed = SPEED_DURATION;
+              p.speed = (p.speed || 0) + SPEED_DURATION;
               break;
           }
         }
