@@ -133,7 +133,7 @@ window.onload = () => {
 /* ──────────────────────────── CONSTANTS ───────────────────────────── */
 const host = location.hostname;
 const WS_URL          = `ws://${host}:3000`;
-const GRID            = 300,  SPAN = 1,  HALF = GRID * SPAN / 2;
+const GRID            = 200,  SPAN = 1,  HALF = GRID * SPAN / 2;
 const DEFORM_RADIUS   = 1,    DEFORM_DEPTH = 3;
 const SPEED_OUT       = 100,  SPEED_RETURN  = 120;
 const MAX_OUT_RANGE   = 120,  MAX_LOST_DIST = 300;
@@ -144,8 +144,8 @@ const MIN_RANGE_OUT   = MAX_OUT_RANGE, MAX_RANGE_OUT = MAX_OUT_RANGE * 2;
 const MIN_CRATER      = DEFORM_RADIUS, MAX_CRATER   = DEFORM_RADIUS * 3;
 const NOISE_SCALE     = 0.004, NOISE_AMP = 30, NOISE_OCTS = 6;
 const TEXTURE_SIZE    = 256;               // resolution of procedural texture
-const PIXEL_RATIO_CAP = 0.75;              // clamp resolution for perf
-const USE_ANTIALIAS   = true;              // enable antialiasing
+const PIXEL_RATIO_CAP = 0.5;               // clamp resolution for perf
+const USE_ANTIALIAS   = false;             // disable antialiasing for perf
 const MAX_DT          = 0.05;
 const MAX_HEALTH      = 100;
 const SPIKE_LIFE      = 0.3;               // seconds spike remains visible
