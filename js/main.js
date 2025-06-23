@@ -175,21 +175,6 @@ let   shieldTimer = 0;
 let   speedTimer  = 0;
 let   doubleShotsLeft = 0;
 
-const powerupText = {
-  health: '+20 Health',
-  double: 'Double Shots',
-  shield: 'Shield',
-  speed: 'Double Speed'
-};
-const powerupColors = {
-  health: '#ffff00',
-  double: '#00ffff',
-  shield: '#00ff00',
-  speed: '#ff00ff'
-};
-let activePowerup = '';
-let powerupTimer = 0;
-
 let   myId        = null;
 let   myColor     = new THREE.Color(0x222222);
 let   myHealth    = MAX_HEALTH;
@@ -205,23 +190,6 @@ function updateHealthBar() {
 
 function updateLivesDisplay() {}
 
-function showPowerupMessage(type){
-  const el = document.getElementById('powerup-msg');
-  if(!el) return;
-  el.textContent = powerupText[type] || '';
-  el.style.color = powerupColors[type] || '#fff';
-  el.classList.add('show');
-  activePowerup = type;
-  if(type==='health') powerupTimer = 1.5;
-}
-
-function hidePowerupMessage(){
-  const el = document.getElementById('powerup-msg');
-  if(!el) return;
-  el.classList.remove('show');
-  activePowerup = '';
-  powerupTimer = 0;
-}
 let   character, bodyMesh, headMesh, Larm, Rarm, Lleg, Rleg;
 let   boxGeo, octGeo, bulletMat, loadedBullet = null;
 let   terrain, noise;
@@ -234,9 +202,7 @@ let   lastSpace = 0, lastZ = 0;
 const move = { f:0, b:0, l:0, r:0 };
 
 // ─────────── POWER-UP STATE ───────────
-const TARGET_RADIUS = 5;     // must match server’s radius
-let powerups   = [];         // array of {id,x,z,type}
-const powerupMeshes = new Map();
+// Power-ups have been removed from the game.
 
 
 /* ──────────────────── DOM + RENDER TARGET SET-UP ─────────────────── */
@@ -316,8 +282,7 @@ document.body.appendChild(renderer.domElement);
     });
   }
 
-/* directional paths to other players */
-const playerPathMeshes = new Map();
+/* directional paths removed */
 
 
 
@@ -367,13 +332,6 @@ socket.addEventListener('message', e => {
         if(av && msg.x!==undefined && msg.z!==undefined){
           const y = meshHeightAt(msg.x,msg.z)+1;
           av.position.set(msg.x,y,msg.z);
-        }
-        const mesh = playerPathMeshes.get(msg.id);
-        if (mesh) {
-          scene.remove(mesh);
-          mesh.geometry.dispose();
-          mesh.material.dispose();
-          playerPathMeshes.delete(msg.id);
         }
       }
     } break;
@@ -647,32 +605,7 @@ function makeRemoteAvatar(col){
 }
 
 /* ────────────────────────── SNAPSHOT HANDLER ─────────────────────── */
-  function applySnapshot({ players:pack, projectiles:shots, powerups:pus }){
-  if(pus){
-    const seen=new Set();
-    pus.forEach(pu=>{
-      seen.add(pu.id);
-      if(!powerupMeshes.has(pu.id)){
-        const color = pu.type==='health'?0xffff00:
-                      pu.type==='double'?0x00ffff:
-                      pu.type==='shield'?0x00ff00:0xff00ff;
-        const geom = new THREE.CircleGeometry(0.75, 16);
-        const mat  = new THREE.MeshBasicMaterial({ color, side:THREE.DoubleSide });
-        const mesh = new THREE.Mesh(geom, mat);
-        mesh.rotation.x = -Math.PI/2;
-        const h = meshHeightAt(pu.x, pu.z);
-        mesh.position.set(pu.x, h + 0.05, pu.z);
-        scene.add(mesh); powerupMeshes.set(pu.id,mesh);
-      }
-    });
-    powerupMeshes.forEach((mesh,id)=>{
-      if(!seen.has(id)){
-        scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose();
-        powerupMeshes.delete(id);
-      }
-    });
-    powerups = pus;
-  }
+function applySnapshot({ players:pack, projectiles:shots }){
   if (pack[myId] && typeof pack[myId].health === 'number') {
     const newH = pack[myId].health;
     if(newH < prevMyHealth && bodyMesh){
@@ -782,7 +715,6 @@ function makeRemoteAvatar(col){
     });
     remoteShots.set(s.id,true);
   });
-  updatePlayerPathMeshes();
   updateRemoteLabels();
   updateScoreboard(pack);
 }
@@ -845,16 +777,7 @@ function animate(now){
   const dt=Math.min(CLOCK.getDelta(),MAX_DT);
   if(shieldTimer>0) shieldTimer=Math.max(0,shieldTimer-dt);
   if(speedTimer>0) speedTimer=Math.max(0,speedTimer-dt);
-  if(powerupTimer>0){
-    powerupTimer=Math.max(0,powerupTimer-dt);
-    if(powerupTimer===0) hidePowerupMessage();
-  } else if(activePowerup){
-    if((activePowerup==='double' && doubleShotsLeft<=0) ||
-       (activePowerup==='shield' && shieldTimer<=0) ||
-       (activePowerup==='speed'  && speedTimer<=0)){
-      hidePowerupMessage();
-    }
-  }
+  /* power-up timers removed */
 
   /* send raw input */
   if(socket.readyState===1&&myId){
@@ -902,18 +825,6 @@ function animate(now){
       }
     }
     if(hitGround){
-      for(let i=0;i<powerups.length;i++){
-        const pu=powerups[i];
-        const dx=p.mesh.position.x-pu.x;
-        const dz=p.mesh.position.z-pu.z;
-        if(Math.hypot(dx,dz)<=TARGET_RADIUS){
-          socket.send(JSON.stringify({t:'pickup', powerupId:pu.id}));
-          showPowerupMessage(pu.type);
-          const mesh=powerupMeshes.get(pu.id);
-          if(mesh){scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); powerupMeshes.delete(pu.id);}
-          powerups.splice(i,1); i--;
-        }
-      }
 
       deformTerrain(p.mesh.position.clone(),p.craterRad,DEFORM_DEPTH);
       if(socket.readyState===1&&myId){
@@ -1069,7 +980,6 @@ function animate(now){
 }
   renderer.render(scene,camera);
 
-  updatePlayerPathMeshes();
   updateRemoteLabels();
 
 }
@@ -1079,107 +989,6 @@ window.addEventListener('resize',()=>{
   renderer.setSize(innerWidth,innerHeight);
 });
 
-function createPathStrip(from, to, startWidth = 1, endWidth = 0.5,
-                         segments = 60, startCol, endCol) {
-  const dx = to.x - from.x;
-  const dz = to.z - from.z;
-  const len = Math.hypot(dx, dz) || 1;
-  const nx = -dz / len, nz = dx / len;
-
-  const vertCount = segments * 2 + 2;
-  const pos = new Float32Array(vertCount * 3);
-  const col = new Float32Array(vertCount * 3);
-  const idx = [];
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const x = THREE.MathUtils.lerp(from.x, to.x, t);
-    const y = THREE.MathUtils.lerp(from.y, to.y, t);
-    const z = THREE.MathUtils.lerp(from.z, to.z, t);
-    const width = THREE.MathUtils.lerp(startWidth, endWidth, t);
-    const offX = nx * width * 0.5;
-    const offZ = nz * width * 0.5;
-
-    const vi = i * 6;
-    const ci = i * 6;
-
-    const r = THREE.MathUtils.lerp(startCol.r, endCol.r, t);
-    const g = THREE.MathUtils.lerp(startCol.g, endCol.g, t);
-    const b = THREE.MathUtils.lerp(startCol.b, endCol.b, t);
-
-    pos[vi]     = x + offX;
-    pos[vi + 1] = y;
-    pos[vi + 2] = z + offZ;
-    pos[vi + 3] = x - offX;
-    pos[vi + 4] = y;
-    pos[vi + 5] = z - offZ;
-
-    col[ci]     = r; col[ci + 1] = g; col[ci + 2] = b;
-    col[ci + 3] = r; col[ci + 4] = g; col[ci + 5] = b;
-    if (i < segments) {
-      const a = i * 2;
-      const b = i * 2 + 1;
-      const c = i * 2 + 2;
-      const d = i * 2 + 3;
-      idx.push(a, b, d, a, d, c);
-    }
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  return g;
-}
-
-
-function updatePlayerPathMeshes() {
-  if (!terrain || !character || !bodyMesh) return;
-  if (spectator) {
-    playerPathMeshes.forEach(mesh => {
-      scene.remove(mesh);
-      mesh.geometry.dispose();
-      mesh.material.dispose();
-    });
-    playerPathMeshes.clear();
-    return;
-  }
-  ghosts.forEach((av, id) => {
-    if (!av.visible) {
-      const old = playerPathMeshes.get(id);
-      if (old) {
-        scene.remove(old);
-        old.geometry.dispose();
-        old.material.dispose();
-        playerPathMeshes.delete(id);
-      }
-      return;
-    }
-
-
-
-    const start = bodyMesh.getWorldPosition(new THREE.Vector3());
-    const end = av.userData.body.getWorldPosition(new THREE.Vector3());
-    const geo = createPathStrip(start, end, 1.2, 0.3, 60,
-                                myColor, av.userData.mat.color);
-
-    const prev = playerPathMeshes.get(id);
-    if (prev) {
-      scene.remove(prev);
-      prev.geometry.dispose();
-      prev.material.dispose();
-    }
-
-    const mesh = new THREE.Mesh(
-      geo,
-      new THREE.MeshBasicMaterial({
-        vertexColors: true,
-        side: THREE.DoubleSide
-      })
-    );
-    scene.add(mesh);
-    playerPathMeshes.set(id, mesh);
-  });
-}
 
 function updateRemoteLabels() {
   const container = document.getElementById('labels');
@@ -1323,7 +1132,6 @@ function applyHitPull(p, dt){
       av.userData.body.getWorldPosition(tmpVec);
       test(tmpVec.clone());
     });
-    powerupMeshes.forEach(mesh=>{ test(mesh.position); });
   } else {
     if(headMesh){ headMesh.getWorldPosition(tmpVec); test(tmpVec.clone()); }
     if(bodyMesh){ bodyMesh.getWorldPosition(tmpVec); test(tmpVec.clone()); }

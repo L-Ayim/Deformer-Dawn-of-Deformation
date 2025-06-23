@@ -31,16 +31,6 @@ const NUM_SPIKES_PER_ATTACK    = 2;
 // Toggle to completely disable terrain spike attacks
 const TERRAIN_ATTACKS_ENABLED  = false;
 
-// Power-up configuration
-const POWERUP_COUNTS = {
-  health: 10,
-  double: 5,
-  shield: 5,
-  speed: 5
-};
-const SHIELD_DURATION = 10; // seconds
-const SPEED_DURATION  = 10; // seconds
-const DOUBLE_SHOTS    = 10; // number of double shots
 
 /* ────────────────── GLOBAL STATE ──────────────────────── */
 // WebSocket server instance
@@ -51,8 +41,6 @@ const players = new Map();
 const projectiles = [];
 // Running ID for each new shot
 let nextShotId = 0;
-// Power-ups present in the world
-let powerups = [];
 
 /* ──────────── NAMED COLOR PALETTE ────────────────────── */
 // A set of high-contrast color names
@@ -93,27 +81,12 @@ function packSnapshot() {
           }
         ])
       ),
-    projectiles,
-    powerups
+    projectiles
   });
 }
 
 /* ───────────── POWER-UP SPAWNING ───────────── */
-function spawnInitialPowerups(){
-  powerups = [];
-  for(const [type,count] of Object.entries(POWERUP_COUNTS)){
-    for(let i=0;i<count;i++){
-      powerups.push({
-        id: uuid(),
-        type,
-        x: (Math.random()*2-1)*TERRAIN_HALF,
-        z: (Math.random()*2-1)*TERRAIN_HALF
-      });
-    }
-  }
-}
-// Spawn once on startup
-spawnInitialPowerups();
+// Power-ups have been removed from the game.
 
 function sendSpike(x, z, h){
   const msg = JSON.stringify({
@@ -261,31 +234,7 @@ wss.on('connection', ws => {
         });
         break;
 
-      // Client reports picking up a power-up
-      case 'pickup': {
-        if (!players.has(id)) break;
-        const idx = powerups.findIndex(pu => pu.id === msg.powerupId);
-        if (idx !== -1) {
-          const item = powerups[idx];
-          powerups.splice(idx,1);
-          const p = players.get(id);
-          switch(item.type){
-            case 'health':
-              p.health = Math.min(MAX_HEALTH, p.health + 20);
-              break;
-            case 'double':
-              p.doubleShots = (p.doubleShots || 0) + DOUBLE_SHOTS;
-              break;
-            case 'shield':
-              p.shield = (p.shield || 0) + SHIELD_DURATION;
-              break;
-            case 'speed':
-              p.speed = (p.speed || 0) + SPEED_DURATION;
-              break;
-          }
-        }
-        break;
-      }
+
 
         case 'hitPlayer': {
           if (!players.has(id)) break;
