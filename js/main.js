@@ -87,44 +87,54 @@ window.onload = () => {
       shootProjectile();
     });
 
-    // ─── Screen Tap Flight Controls ──────
-    let lastTopTap = 0;
-    let lastBottomTap = 0;
+    // ─── Sprint Button ───────────────────
+    const sprintBtn = document.getElementById('sprint-button');
+    sprintBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      manualSprint = true;
+      shiftHeld = true;
+    });
+    sprintBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      manualSprint = false;
+      shiftHeld = joystickIntensity > 0.9;
+    });
 
-    const handleScreenTouch = e => {
-      if (e.touches.length > 1) return;
-      const t = e.changedTouches[0];
-      if (!t ||
-          t.target.closest('#joystick-zone') ||
-          t.target.closest('#shoot-button') ||
-          t.target.closest('#fly-toggle-button')) return;
-      const top = t.clientY < innerHeight / 2;
+    // ─── Ascend Button ───────────────────
+    const ascendBtn = document.getElementById('ascend-button');
+    ascendBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
       const now = performance.now();
-      if (top) {
-        if (now - lastTopTap < 300) {
-          flyMode = true;
-        } else if (!flyMode && onGround) {
-          vertVel = 16;
-          onGround = false;
-        } else if (flyMode) {
-          spaceHeld = true;
-        }
-        lastTopTap = now;
-      } else {
-        if (now - lastBottomTap < 300) {
-          flyMode = false;
-        } else if (flyMode) {
-          zHeld = true;
-        }
-        lastBottomTap = now;
+      spaceHeld = true;
+      if (now - lastSpace < 300 && !flyMode) {
+        flyMode = true;
+      } else if (!flyMode && onGround) {
+        vertVel = 16;
+        onGround = false;
       }
-    };
+      lastSpace = now;
+    });
+    ascendBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      spaceHeld = false;
+    });
 
-    const endScreenTouch = () => { spaceHeld = false; zHeld = false; };
+    // ─── Descend Button ──────────────────
+    const descendBtn = document.getElementById('descend-button');
+    descendBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const now = performance.now();
+      zHeld = true;
+      if (flyMode && now - lastZ < 300) {
+        flyMode = false;
+      }
+      lastZ = now;
+    });
+    descendBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      zHeld = false;
+    });
 
-    renderer.domElement.addEventListener('touchstart', handleScreenTouch, { passive: true });
-    renderer.domElement.addEventListener('touchend', endScreenTouch, { passive: true });
-    renderer.domElement.addEventListener('touchcancel', endScreenTouch, { passive: true });
 
   }
 
@@ -743,10 +753,15 @@ document.addEventListener('keydown',e=>{
       shiftHeld = manualSprint || joystickIntensity > 0.9;
       break;
     case'Space':
-      spaceHeld=true;
-      if(now-lastSpace<300) flyMode=!flyMode;
-      else if(onGround&&!flyMode){ vertVel=16; onGround=false; }
-      lastSpace=now; break;
+      spaceHeld = true;
+      if (now - lastSpace < 300) {
+        if (!flyMode) flyMode = true;
+      } else if (onGround && !flyMode) {
+        vertVel = 16;
+        onGround = false;
+      }
+      lastSpace = now;
+      break;
     case'KeyZ':case'KeyZ':
       zHeld =true;
       if(flyMode&&now-lastZ<300) flyMode=false;

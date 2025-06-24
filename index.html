@@ -28,6 +28,9 @@
   <div id="joystick-zone"></div>
   <div id="joystick-look-zone"></div>
   <div id="shoot-button"></div>
+  <div id="sprint-button" class="fly-control">S</div>
+  <div id="ascend-button" class="fly-control">&#9650;</div>
+  <div id="descend-button" class="fly-control">&#9660;</div>
 
   <div id="health-bar">
     <div id="health-text"></div>
@@ -48,6 +51,9 @@
 
       document.getElementById('joystick-zone').style.display = 'block';
       document.getElementById('shoot-button').style.display  = 'block';
+      document.getElementById('sprint-button').style.display = 'block';
+      document.getElementById('ascend-button').style.display = 'block';
+      document.getElementById('descend-button').style.display = 'block';
       fullscreenBtn.style.display                             = 'block';
 
       fullscreenBtn.addEventListener('click', () => {
